@@ -42,19 +42,37 @@ export default function WatchPage() {
 
   // ---------- PAIRING ----------
   async function createPairing() {
-    try {
-      const res = await fetch("/api/pairing/create", {
-        method: "POST",
-      });
+  try {
+    const res = await fetch("/api/pairing/create", {
+      method: "POST",
+    });
 
-      const data = await res.json();
-      setPairingToken(data.token);
+    console.log("STATUS:", res.status);
 
-      startPairingPolling(data.token);
-    } catch (e) {
-      console.error("Erreur pairing:", e);
+    // 🔥 si erreur HTTP → stop
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Erreur API:", text);
+      return;
     }
+
+    // 🔥 évite crash JSON
+    const data = await res.json();
+
+    if (!data.token) {
+      console.error("Pas de token reçu", data);
+      return;
+    }
+
+    console.log("TOKEN:", data.token);
+
+    setPairingToken(data.token);
+    startPairingPolling(data.token);
+
+  } catch (e) {
+    console.error("Erreur pairing:", e);
   }
+}
 
   function startPairingPolling(token) {
     const interval = setInterval(async () => {
