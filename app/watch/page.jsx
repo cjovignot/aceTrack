@@ -279,10 +279,10 @@ export default function WatchPage() {
               fontSize: 12,
               maxWidth: 240,
               lineHeight: 1.4,
+              color: "#4ade80",
             }}
           >
-            Scanne ce code depuis le téléphone ou Apple Watch pour connecter le
-            match
+            Scanne ce code depuis le téléphone pour connecter le match
           </p>
         </div>
       )}
