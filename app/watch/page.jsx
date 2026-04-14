@@ -21,31 +21,30 @@ function getServeSide(score) {
   return (p + o) % 2 === 0 ? "deuce" : "ad";
 }
 
-// ---------- Component ----------
 export default function WatchPage() {
   const searchParams = useSearchParams();
 
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [serviceFaults, setServiceFaults] = useState(0);
   const [pointHistory, setPointHistory] = useState([]);
 
-  // 🔥 pairing
   const [pairingToken, setPairingToken] = useState(null);
-  // 🔥 protection double appel React Strict Mode
+
   const hasStarted = useRef(false);
+  const pairingIntervalRef = useRef(null);
+  const matchIntervalRef = useRef(null);
 
   // ---------- INIT ----------
   useEffect(() => {
-    if (hasStarted.current) return; // 🔥 bloque 2e appel
-
+    if (hasStarted.current) return;
     hasStarted.current = true;
 
     createPairing();
   }, []);
 
+  // ---------- LOAD MATCH ----------
   useEffect(() => {
     if (!matchId) return;
 
@@ -57,7 +56,7 @@ export default function WatchPage() {
       if (res.ok) {
         const data = await res.json();
         setMatch(data);
-        startPolling(data._id);
+        startMatchPolling(data._id);
       }
     }
 
@@ -66,39 +65,30 @@ export default function WatchPage() {
 
   // ---------- PAIRING ----------
   async function createPairing() {
-    if (pairingToken) return; // 🔥 évite double création
+    if (pairingToken) return;
 
     try {
       const res = await fetch("/api/pairing/create", {
         method: "POST",
       });
 
-      console.log("STATUS:", res.status);
-
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Erreur API:", text);
-        return;
-      }
+      if (!res.ok) return;
 
       const data = await res.json();
 
-      if (!data.token) {
-        console.error("Pas de token reçu", data);
-        return;
-      }
-
-      console.log("TOKEN:", data.token);
+      if (!data.token) return;
 
       setPairingToken(data.token);
       startPairingPolling(data.token);
     } catch (e) {
-      console.error("Erreur pairing:", e);
+      console.error(e);
     }
   }
 
   function startPairingPolling(token) {
-    const interval = setInterval(async () => {
+    if (pairingIntervalRef.current) return;
+
+    pairingIntervalRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/pairing/${token}`);
         if (!res.ok) return;
@@ -106,27 +96,25 @@ export default function WatchPage() {
         const data = await res.json();
 
         if (data.connected) {
-          setIsConnected(true);
-
           const id = data.match_id;
           if (!id) return;
 
-          setMatchId(id); // 🔥 important
           setIsConnected(true);
+          setMatchId(id);
 
-          clearInterval(interval);
+          clearInterval(pairingIntervalRef.current);
+          pairingIntervalRef.current = null;
         }
       } catch (e) {
-        console.log("Polling pairing error");
+        console.log("pairing error");
       }
     }, 1500);
   }
 
-  // ---------- Polling match ----------
-  function startPolling(id) {
-    const interval = setInterval(async () => {
-      if (!id) return;
+  function startMatchPolling(id) {
+    if (matchIntervalRef.current) return;
 
+    matchIntervalRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/matches/${id}`, {
           credentials: "include",
@@ -137,25 +125,22 @@ export default function WatchPage() {
         const updated = await res.json();
         setMatch(updated);
       } catch (e) {
-        console.log("Polling match error");
+        console.log("match polling error");
       }
     }, 1500);
-
-    return () => clearInterval(interval);
   }
 
-  // ---------- Score ----------
+  // ---------- SCORE ----------
   async function scorePoint(winner) {
     if (!match) return;
 
     setServiceFaults(0);
 
     const result = addPoint(match.score, winner);
-    const newScore = result.score;
 
     const updated = {
       ...match,
-      score: newScore,
+      score: result.score,
       ...(result.matchWon
         ? { status: "Terminé", winner: result.matchWinner }
         : {}),
@@ -189,7 +174,7 @@ export default function WatchPage() {
     ]);
   }
 
-  // ---------- Undo ----------
+  // ---------- UNDO ----------
   async function handleUndo() {
     if (!pointHistory.length || !match) return;
 
@@ -219,7 +204,6 @@ export default function WatchPage() {
     });
   }
 
-  // ---------- Service fault ----------
   function handleServiceFault() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
@@ -229,43 +213,25 @@ export default function WatchPage() {
     }
   }
 
-  // ---------- INIT SCREEN ----------
-  if (!pairingToken) {
-    return <div style={centered}>Initialisation...</div>;
-  }
+  // ---------- UI ----------
 
-  // ---------- QR CONNECTION ----------
-  if (!isConnected) {
-    const pairingUrl = `${window.location.origin}/connect?token=${pairingToken}`;
-
-    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      pairingUrl,
+  const qr =
+    pairingToken &&
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+      `${window.location.origin}/connect?token=${pairingToken}`,
     )}`;
-
-    return (
-      <div style={centered}>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ color: "#4ade80" }}>Connecter le téléphone</p>
-          <img src={qr} width={180} />
-          <p style={{ fontSize: 12, color: "#666" }}>
-            Scanne avec le téléphone
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ---------- NO MATCH ----------
-  if (!match) {
-    return <div style={centered}>Aucun match connecté</div>;
-  }
-
-  // ---------- SCORING UI ----------
-  const score = match.score || {};
-  const serving = score.serving;
 
   return (
     <div style={grid}>
+      {/* QR overlay (optionnel) */}
+      {!isConnected && qr && (
+        <div style={qrOverlay}>
+          <p style={{ color: "#4ade80" }}>Téléphone non connecté</p>
+          <img src={qr} width={160} />
+        </div>
+      )}
+
+      {/* SCORE UI toujours accessible */}
       <button onClick={() => scorePoint("player")} style={btnRed}>
         Faute
       </button>
@@ -277,15 +243,18 @@ export default function WatchPage() {
       <div />
 
       <div style={scoreBox}>
-        <div>{score.current_game_opponent || "0"}</div>
-        <div>{score.current_game_player || "0"}</div>
+        <div>{match?.score?.current_game_opponent || "0"}</div>
+        <div>{match?.score?.current_game_player || "0"}</div>
       </div>
 
       <button onClick={handleServiceFault} style={btnBrown}>
         Service
       </button>
 
-      <button onClick={() => scorePoint(serving)} style={btnPurple}>
+      <button
+        onClick={() => scorePoint(match?.score?.serving)}
+        style={btnPurple}
+      >
         Ace
       </button>
 
@@ -305,15 +274,6 @@ export default function WatchPage() {
 }
 
 // ---------- Styles ----------
-const centered = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "100vh",
-  background: "#000",
-  color: "#fff",
-};
-
 const grid = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr 1fr",
@@ -332,6 +292,17 @@ const scoreBox = {
   alignItems: "center",
   fontSize: 28,
   color: "#facc15",
+};
+
+const qrOverlay = {
+  position: "fixed",
+  top: 20,
+  right: 20,
+  background: "rgba(0,0,0,0.8)",
+  padding: 10,
+  borderRadius: 8,
+  textAlign: "center",
+  zIndex: 999,
 };
 
 const btnGreen = { background: "#16a34a", color: "#fff" };
