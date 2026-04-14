@@ -33,11 +33,52 @@ export default function WatchPage() {
   const [serviceFaults, setServiceFaults] = useState(0);
   const [pointHistory, setPointHistory] = useState([]);
 
-  // ---------- Load match ----------
+  // NEW
+  const [pairingToken, setPairingToken] = useState(null);
+
+  // ---------- INIT ----------
   useEffect(() => {
-    loadMatch();
+    init();
   }, []);
 
+  async function init() {
+    await createPairing();
+    await loadMatch();
+  }
+
+  // ---------- PAIRING ----------
+  async function createPairing() {
+    const res = await fetch("/api/pairing/create", {
+      method: "POST",
+    });
+
+    const data = await res.json();
+    setPairingToken(data.token);
+
+    startPairingPolling(data.token);
+  }
+
+  function startPairingPolling(token) {
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/pairing/${token}`);
+      const data = await res.json();
+
+      if (data.connected && data.match_id) {
+        setIsConnected(true);
+
+        const resMatch = await fetch(`/api/matches/${data.match_id}`, {
+          credentials: "include",
+        });
+
+        const matchData = await resMatch.json();
+        setMatch(matchData);
+
+        clearInterval(interval);
+      }
+    }, 1500);
+  }
+
+  // ---------- Load match ----------
   async function loadMatch() {
     let data = [];
 
@@ -57,15 +98,14 @@ export default function WatchPage() {
     if (activeMatch) {
       setMatch(activeMatch);
 
-      // 🔥 auto connect si déjà streaming
       if (activeMatch.is_streaming) {
         setIsConnected(true);
       }
+
+      startPolling(activeMatch._id);
     }
 
     setLoading(false);
-
-    startPolling(activeMatch?._id);
   }
 
   // ---------- Polling ----------
@@ -80,7 +120,6 @@ export default function WatchPage() {
       const updated = await res.json();
       setMatch(updated);
 
-      // 🔥 connexion auto
       if (updated.is_streaming && updated.stream_status === "live") {
         setIsConnected(true);
       }
@@ -169,7 +208,8 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver = match.score.serving === "player" ? "opponent" : "player";
+      const receiver =
+        match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver);
     }
   }
@@ -181,19 +221,31 @@ export default function WatchPage() {
 
   // ---------- QR CONNECTION ----------
   if (!isConnected) {
-    const streamUrl = match
-      ? `${window.location.origin}/stream?matchId=${match._id}`
-      : `${window.location.origin}/stream`;
+    const pairingUrl = pairingToken
+      ? `${window.location.origin}/connect?token=${pairingToken}`
+      : null;
 
-    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      streamUrl,
-    )}`;
+    const qr = pairingUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+          pairingUrl
+        )}`
+      : null;
 
     return (
       <div style={centered}>
-        <p style={{ color: "#4ade80" }}>Connecter le téléphone</p>
-        <img src={qr} width={180} />
-        <p style={{ fontSize: 12, color: "#666" }}>Scanne avec le téléphone</p>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ color: "#4ade80" }}>Connecter le téléphone</p>
+
+          {qr ? (
+            <img src={qr} width={180} />
+          ) : (
+            <p>Génération du QR...</p>
+          )}
+
+          <p style={{ fontSize: 12, color: "#666" }}>
+            Scanne avec le téléphone
+          </p>
+        </div>
       </div>
     );
   }
@@ -202,7 +254,7 @@ export default function WatchPage() {
   if (!showPreview) {
     return (
       <div style={{ ...centered, flexDirection: "column" }}>
-        {match.stream_url ? (
+        {match?.stream_url ? (
           <video
             src={match.stream_url}
             autoPlay
