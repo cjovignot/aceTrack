@@ -42,9 +42,9 @@ export default function WatchPage() {
   }, []);
 
   async function init() {
-    await createPairing();
-    await loadMatch();
-  }
+  await createPairing();
+  setLoading(false); // 🔥 on débloque direct l’UI
+}
 
   // ---------- PAIRING ----------
   async function createPairing() {
