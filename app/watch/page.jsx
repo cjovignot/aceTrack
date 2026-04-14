@@ -24,9 +24,9 @@ function getServeSide(score) {
 // ---------- Component ----------
 export default function WatchPage() {
   const searchParams = useSearchParams();
-  const matchId = searchParams.get("matchId");
 
   const [match, setMatch] = useState(null);
+  const [matchId, setMatchId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [serviceFaults, setServiceFaults] = useState(0);
@@ -45,6 +45,25 @@ export default function WatchPage() {
 
     createPairing();
   }, []);
+
+  useEffect(() => {
+    if (!matchId) {
+      return <div style={centered}>Connexion au match...</div>;
+    }
+    async function loadMatch() {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMatch(data);
+        startPolling(data._id);
+      }
+    }
+
+    loadMatch();
+  }, [matchId]);
 
   // ---------- PAIRING ----------
   async function createPairing() {
@@ -87,20 +106,14 @@ export default function WatchPage() {
 
         const data = await res.json();
 
-        if (data.connected && data.match_id) {
+        if (data.connected) {
           setIsConnected(true);
 
-          // 🔥 charger match UNIQUEMENT ici
-          const resMatch = await fetch(`/api/matches/${data.match_id}`, {
-            credentials: "include",
-          });
+          const id = data.match_id;
+          if (!id) return;
 
-          if (resMatch.ok) {
-            const matchData = await resMatch.json();
-            setMatch(matchData);
-
-            startPolling(matchData._id);
-          }
+          setMatchId(id); // 🔥 important
+          setIsConnected(true);
 
           clearInterval(interval);
         }
