@@ -1,3 +1,5 @@
+import { pairingStore } from "../store";
+
 export async function GET(req, { params }) {
   const { token } = await params; // ✅ obligatoire
 
