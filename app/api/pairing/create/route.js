@@ -5,6 +5,7 @@ function generateToken() {
 }
 
 export async function POST() {
+  console.log("PAIRING CREATE ROUTE HIT");
   const token = generateToken();
 
   pairingStore[token] = {
