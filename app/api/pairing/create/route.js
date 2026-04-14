@@ -12,7 +12,7 @@ export async function POST() {
     match_id: null,
     connected: false,
     created_at: Date.now(),
-    expires_at: Date.now() + 1000 * 60 * 10, // 10 min
+    expires_at: Date.now() + 1000 * 60 * 10,
   };
 
   return Response.json({ token });
