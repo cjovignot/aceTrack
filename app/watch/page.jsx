@@ -30,6 +30,7 @@ export default function WatchPage() {
 
   const [serviceFaults, setServiceFaults] = useState(0);
   const [pointHistory, setPointHistory] = useState([]);
+  const [lastPoint, setLastPoint] = useState(null);
 
   const [pairingToken, setPairingToken] = useState(null);
 
@@ -111,73 +112,59 @@ export default function WatchPage() {
     }, 1500);
   }
 
-  // ---------- SCORE (LOGIQUE BASE44 INJECTÉE) ----------
-  async function scorePoint(
-    winner,
-    shotType = "Coup droit",
-    isWinner = true,
-    isUnforcedError = false,
-  ) {
+  // ---------- SCORE ----------
+  async function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
     if (!match) return;
 
     setServiceFaults(0);
 
     const result = addPoint(match.score, winner);
-    const newScore = result.score;
 
-    const updatedMatch = {
+    const updated = {
       ...match,
-      score: newScore,
+      score: result.score,
       ...(result.matchWon
         ? { status: "Terminé", winner: result.matchWinner }
         : {}),
     };
 
-    setMatch(updatedMatch);
+    setMatch(updated);
 
     await fetch(`/api/matches/${match._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(updatedMatch),
+      body: JSON.stringify(updated),
     });
 
-    const res = await fetch("/api/points", {
+    await fetch("/api/points", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
         match_id: match._id,
         point_winner: winner,
-        shot_type: shotType,
-        is_winner: isWinner,
-        is_unforced_error: isUnforcedError,
         timestamp: new Date(),
       }),
     });
 
-    const log = await res.json();
-
-    setPointHistory((prev) => [
-      { log, prevScore: match.score, prevStatus: match.status },
-      ...prev,
-    ]);
+    setLastPoint(winner);
+    setTimeout(() => setLastPoint(null), 150);
   }
 
-  // ---------- UNDO (LOGIQUE BASE44) ----------
+  // ---------- UNDO ----------
   async function handleUndo() {
     if (!pointHistory.length || !match) return;
 
     const { log, prevScore, prevStatus } = pointHistory[0];
 
-    setPointHistory((prev) => prev.slice(1));
-    setServiceFaults(0);
+    setPointHistory((p) => p.slice(1));
 
     const restored = {
       ...match,
       score: prevScore,
       status: prevStatus,
-      winner: undefined,
+      winner: null,
     };
 
     setMatch(restored);
@@ -195,125 +182,184 @@ export default function WatchPage() {
     });
   }
 
-  // ---------- SERVICE FAULT ----------
   function handleServiceFault() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const server = match?.score?.serving;
-      const receiver = server === "player" ? "opponent" : "player";
-
-      scorePoint(receiver, "Double faute", false, true);
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
+      scorePoint(receiver);
     }
   }
 
-  // ---------- UI ----------
-  const qr =
-    pairingToken &&
-    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      `${window.location.origin}/connect?token=${pairingToken}`,
-    )}`;
-
+  // ---------- DERIVED ----------
   const score = match?.score || {};
   const setsP = score.sets_player || [];
   const setsO = score.sets_opponent || [];
   const serving = score.serving;
   const serveSide = getServeSide(score);
+  const isFinished = match?.status === "Terminé";
+
+  // ---------- CELL STYLE ----------
+  const cellBtn = (bg, active = false) => ({
+    background: active ? "#facc15" : bg,
+    color: active ? "#000" : "#fff",
+    border: "none",
+    borderRadius: 6,
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    userSelect: "none",
+  });
 
   return (
-    <div style={grid}>
-      {/* QR overlay */}
-      {!isConnected && qr && (
-        <div style={qrOverlay}>
-          <p style={{ color: "#4ade80" }}>Téléphone non connecté</p>
-          <img src={qr} width={160} />
-        </div>
-      )}
-
-      {/* ZONE 1 */}
-      <button onClick={() => scorePoint("player")} style={btnRed}>
+    <div
+      style={{
+        background: "#000",
+        color: "#fff",
+        position: "fixed",
+        inset: 0,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gridTemplateRows: "1fr 1fr 1fr 1fr",
+        gap: 3,
+        padding: 3,
+      }}
+    >
+      {/* Zone 1 */}
+      <button
+        onClick={() => scorePoint("player", "Faute directe", false)}
+        style={{
+          ...cellBtn("#4a1515"),
+          transform: lastPoint === "player" ? "scale(0.93)" : "scale(1)",
+        }}
+      >
         Faute
       </button>
 
-      {/* ZONE 2 */}
-      <button onClick={() => scorePoint("opponent")} style={btnBlue}>
+      {/* Zone 2 */}
+      <button
+        onClick={() => scorePoint("opponent", "Coup droit", true)}
+        style={{
+          ...cellBtn("#1e3a5f"),
+          transform: lastPoint === "opponent" ? "scale(0.93)" : "scale(1)",
+        }}
+      >
         Gagnant
       </button>
 
       <div />
 
-      {/* SCORE DISPLAY (LOGIQUE BASE44 + SERVE SIDE) */}
-      <div style={scoreBox}>
-        <div>{score.current_game_opponent || "0"}</div>
-        <div>{score.current_game_player || "0"}</div>
+      {/* SCORE CENTER */}
+      <div
+        style={{
+          gridColumn: "1 / 3",
+          gridRow: "2 / 4",
+          background: "#0a0a0a",
+          borderRadius: 6,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          position: "relative",
+          gap: 4,
+        }}
+      >
+        {/* Serve indicator */}
+        <div
+          style={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#facc15",
+            ...(serving === "player"
+              ? serveSide === "deuce"
+                ? { bottom: 5, right: 5 }
+                : { bottom: 5, left: 5 }
+              : serveSide === "deuce"
+                ? { top: 5, left: 5 }
+                : { top: 5, right: 5 }),
+          }}
+        />
+
+        {/* Opponent */}
+        <div style={{ fontSize: 22 }}>
+          {setsO.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_opponent || "0"}
+          </span>
+        </div>
+
+        <div style={{ width: "70%", height: 1, background: "#222" }} />
+
+        {/* Player */}
+        <div style={{ fontSize: 22 }}>
+          {setsP.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_player || "0"}
+          </span>
+        </div>
       </div>
 
-      {/* SERVICE FAULT */}
-      <button onClick={handleServiceFault} style={btnBrown}>
+      {/* Service fault */}
+      <button
+        onClick={handleServiceFault}
+        style={cellBtn(serviceFaults ? "#92400e" : "#2d1a00")}
+      >
         Service
       </button>
 
-      {/* ACE */}
+      {/* Ace */}
       <button
         onClick={() => scorePoint(serving, "Service gagnant", true)}
-        style={btnPurple}
+        style={cellBtn("#1a1a2e")}
       >
         Ace
       </button>
 
-      {/* FAUTE */}
-      <button onClick={() => scorePoint("opponent")} style={btnRed}>
+      {/* Bottom row */}
+      <button onClick={() => scorePoint("opponent")} style={cellBtn("#4a1515")}>
         Faute
       </button>
 
-      {/* GAGNANT */}
-      <button onClick={() => scorePoint("player")} style={btnGreen}>
+      <button onClick={() => scorePoint("player")} style={cellBtn("#14532d")}>
         Gagnant
       </button>
 
-      {/* UNDO */}
-      <button onClick={handleUndo} style={btnUndo}>
+      <button onClick={handleUndo} style={cellBtn("#111")}>
         ↩
       </button>
+
+      {/* overlay */}
+      {isFinished && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            color: "#4ade80",
+          }}
+        >
+          {match?.winner === "player" ? "🏆 Victoire" : "💪 Défaite"}
+        </div>
+      )}
     </div>
   );
 }
-
-// ---------- STYLES ----------
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr 1fr",
-  gridTemplateRows: "1fr 1fr 1fr 1fr",
-  gap: 3,
-  height: "100vh",
-  background: "#000",
-};
-
-const scoreBox = {
-  gridColumn: "1 / 3",
-  gridRow: "2 / 4",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  fontSize: 28,
-  color: "#facc15",
-};
-
-const qrOverlay = {
-  position: "fixed",
-  top: 20,
-  right: 20,
-  background: "rgba(0,0,0,0.8)",
-  padding: 10,
-  borderRadius: 8,
-  textAlign: "center",
-  zIndex: 999,
-};
-
-const btnGreen = { background: "#16a34a", color: "#fff" };
-const btnRed = { background: "#4a1515", color: "#fff" };
-const btnBlue = { background: "#1e3a5f", color: "#fff" };
-const btnBrown = { background: "#2d1a00", color: "#fff" };
-const btnPurple = { background: "#1a1a2e", color: "#fff" };
-const btnUndo = { background: "#111", color: "#888" };
