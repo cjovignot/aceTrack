@@ -27,6 +27,7 @@ export default function WatchPage() {
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+
   const [serviceFaults, setServiceFaults] = useState(0);
   const [pointHistory, setPointHistory] = useState([]);
 
@@ -40,7 +41,6 @@ export default function WatchPage() {
   useEffect(() => {
     if (hasStarted.current) return;
     hasStarted.current = true;
-
     createPairing();
   }, []);
 
@@ -67,46 +67,31 @@ export default function WatchPage() {
   async function createPairing() {
     if (pairingToken) return;
 
-    try {
-      const res = await fetch("/api/pairing/create", {
-        method: "POST",
-      });
+    const res = await fetch("/api/pairing/create", { method: "POST" });
+    if (!res.ok) return;
 
-      if (!res.ok) return;
+    const data = await res.json();
+    if (!data.token) return;
 
-      const data = await res.json();
-
-      if (!data.token) return;
-
-      setPairingToken(data.token);
-      startPairingPolling(data.token);
-    } catch (e) {
-      console.error(e);
-    }
+    setPairingToken(data.token);
+    startPairingPolling(data.token);
   }
 
   function startPairingPolling(token) {
     if (pairingIntervalRef.current) return;
 
     pairingIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/pairing/${token}`);
-        if (!res.ok) return;
+      const res = await fetch(`/api/pairing/${token}`);
+      if (!res.ok) return;
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (data.connected) {
-          const id = data.match_id;
-          if (!id) return;
+      if (data.connected && data.match_id) {
+        setIsConnected(true);
+        setMatchId(data.match_id);
 
-          setIsConnected(true);
-          setMatchId(id);
-
-          clearInterval(pairingIntervalRef.current);
-          pairingIntervalRef.current = null;
-        }
-      } catch (e) {
-        console.log("pairing error");
+        clearInterval(pairingIntervalRef.current);
+        pairingIntervalRef.current = null;
       }
     }, 1500);
   }
@@ -115,44 +100,46 @@ export default function WatchPage() {
     if (matchIntervalRef.current) return;
 
     matchIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/matches/${id}`, {
-          credentials: "include",
-        });
+      const res = await fetch(`/api/matches/${id}`, {
+        credentials: "include",
+      });
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        const updated = await res.json();
-        setMatch(updated);
-      } catch (e) {
-        console.log("match polling error");
-      }
+      const updated = await res.json();
+      setMatch(updated);
     }, 1500);
   }
 
-  // ---------- SCORE ----------
-  async function scorePoint(winner) {
+  // ---------- SCORE (LOGIQUE BASE44 INJECTÉE) ----------
+  async function scorePoint(
+    winner,
+    shotType = "Coup droit",
+    isWinner = true,
+    isUnforcedError = false,
+  ) {
     if (!match) return;
 
     setServiceFaults(0);
 
     const result = addPoint(match.score, winner);
+    const newScore = result.score;
 
-    const updated = {
+    const updatedMatch = {
       ...match,
-      score: result.score,
+      score: newScore,
       ...(result.matchWon
         ? { status: "Terminé", winner: result.matchWinner }
         : {}),
     };
 
-    setMatch(updated);
+    setMatch(updatedMatch);
 
     await fetch(`/api/matches/${match._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(updated),
+      body: JSON.stringify(updatedMatch),
     });
 
     const res = await fetch("/api/points", {
@@ -162,6 +149,9 @@ export default function WatchPage() {
       body: JSON.stringify({
         match_id: match._id,
         point_winner: winner,
+        shot_type: shotType,
+        is_winner: isWinner,
+        is_unforced_error: isUnforcedError,
         timestamp: new Date(),
       }),
     });
@@ -174,19 +164,20 @@ export default function WatchPage() {
     ]);
   }
 
-  // ---------- UNDO ----------
+  // ---------- UNDO (LOGIQUE BASE44) ----------
   async function handleUndo() {
     if (!pointHistory.length || !match) return;
 
     const { log, prevScore, prevStatus } = pointHistory[0];
 
     setPointHistory((prev) => prev.slice(1));
+    setServiceFaults(0);
 
     const restored = {
       ...match,
       score: prevScore,
       status: prevStatus,
-      winner: null,
+      winner: undefined,
     };
 
     setMatch(restored);
@@ -204,26 +195,34 @@ export default function WatchPage() {
     });
   }
 
+  // ---------- SERVICE FAULT ----------
   function handleServiceFault() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver = match.score.serving === "player" ? "opponent" : "player";
-      scorePoint(receiver);
+      const server = match?.score?.serving;
+      const receiver = server === "player" ? "opponent" : "player";
+
+      scorePoint(receiver, "Double faute", false, true);
     }
   }
 
   // ---------- UI ----------
-
   const qr =
     pairingToken &&
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
       `${window.location.origin}/connect?token=${pairingToken}`,
     )}`;
 
+  const score = match?.score || {};
+  const setsP = score.sets_player || [];
+  const setsO = score.sets_opponent || [];
+  const serving = score.serving;
+  const serveSide = getServeSide(score);
+
   return (
     <div style={grid}>
-      {/* QR overlay (optionnel) */}
+      {/* QR overlay */}
       {!isConnected && qr && (
         <div style={qrOverlay}>
           <p style={{ color: "#4ade80" }}>Téléphone non connecté</p>
@@ -231,41 +230,48 @@ export default function WatchPage() {
         </div>
       )}
 
-      {/* SCORE UI toujours accessible */}
+      {/* ZONE 1 */}
       <button onClick={() => scorePoint("player")} style={btnRed}>
         Faute
       </button>
 
+      {/* ZONE 2 */}
       <button onClick={() => scorePoint("opponent")} style={btnBlue}>
         Gagnant
       </button>
 
       <div />
 
+      {/* SCORE DISPLAY (LOGIQUE BASE44 + SERVE SIDE) */}
       <div style={scoreBox}>
-        <div>{match?.score?.current_game_opponent || "0"}</div>
-        <div>{match?.score?.current_game_player || "0"}</div>
+        <div>{score.current_game_opponent || "0"}</div>
+        <div>{score.current_game_player || "0"}</div>
       </div>
 
+      {/* SERVICE FAULT */}
       <button onClick={handleServiceFault} style={btnBrown}>
         Service
       </button>
 
+      {/* ACE */}
       <button
-        onClick={() => scorePoint(match?.score?.serving)}
+        onClick={() => scorePoint(serving, "Service gagnant", true)}
         style={btnPurple}
       >
         Ace
       </button>
 
+      {/* FAUTE */}
       <button onClick={() => scorePoint("opponent")} style={btnRed}>
         Faute
       </button>
 
+      {/* GAGNANT */}
       <button onClick={() => scorePoint("player")} style={btnGreen}>
         Gagnant
       </button>
 
+      {/* UNDO */}
       <button onClick={handleUndo} style={btnUndo}>
         ↩
       </button>
@@ -273,7 +279,7 @@ export default function WatchPage() {
   );
 }
 
-// ---------- Styles ----------
+// ---------- STYLES ----------
 const grid = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr 1fr",
