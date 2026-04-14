@@ -1,17 +1,21 @@
-import { pairingStore } from "../store";
+import { redis } from "@/lib/redis";
 
 export async function POST(req) {
-  const body = await req.json();
-  const { token, match_id } = body;
+  const { token, match_id } = await req.json();
 
-  const pairing = pairingStore[token];
+  const pairing = await redis.get(`pairing:${token}`);
 
   if (!pairing) {
     return Response.json({ error: "Token invalide" }, { status: 404 });
   }
 
-  pairing.connected = true;
-  pairing.match_id = match_id;
+  const updated = {
+    ...pairing,
+    connected: true,
+    match_id,
+  };
+
+  await redis.set(`pairing:${token}`, updated, { ex: 600 });
 
   return Response.json({ success: true });
 }

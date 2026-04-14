@@ -1,17 +1,12 @@
-import { pairingStore } from "../store";
+import { redis } from "@/lib/redis";
 
 export async function GET(req, { params }) {
-  const { token } = await params; // ✅ obligatoire
+  const { token } = await params;
 
-  const pairing = pairingStore[token];
+  const pairing = await redis.get(`pairing:${token}`);
 
   if (!pairing) {
     return Response.json({ error: "Token invalide" }, { status: 404 });
-  }
-
-  if (Date.now() > pairing.expires_at) {
-    delete pairingStore[token];
-    return Response.json({ error: "Token expiré" }, { status: 410 });
   }
 
   return Response.json(pairing);
