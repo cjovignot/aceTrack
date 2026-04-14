@@ -47,9 +47,8 @@ export default function WatchPage() {
   }, []);
 
   useEffect(() => {
-    if (!matchId) {
-      return <div style={centered}>Connexion au match...</div>;
-    }
+    if (!matchId) return;
+
     async function loadMatch() {
       const res = await fetch(`/api/matches/${matchId}`, {
         credentials: "include",
