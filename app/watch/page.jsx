@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
 
@@ -34,45 +34,50 @@ export default function WatchPage() {
 
   // 🔥 pairing
   const [pairingToken, setPairingToken] = useState(null);
+  // 🔥 protection double appel React Strict Mode
+  const hasStarted = useRef(false);
 
   // ---------- INIT ----------
   useEffect(() => {
+    if (hasStarted.current) return; // 🔥 bloque 2e appel
+
+    hasStarted.current = true;
+
     createPairing();
   }, []);
 
   // ---------- PAIRING ----------
   async function createPairing() {
-  try {
-    const res = await fetch("/api/pairing/create", {
-      method: "POST",
-    });
+    if (pairingToken) return; // 🔥 évite double création
 
-    console.log("STATUS:", res.status);
+    try {
+      const res = await fetch("/api/pairing/create", {
+        method: "POST",
+      });
 
-    // 🔥 si erreur HTTP → stop
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Erreur API:", text);
-      return;
+      console.log("STATUS:", res.status);
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Erreur API:", text);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data.token) {
+        console.error("Pas de token reçu", data);
+        return;
+      }
+
+      console.log("TOKEN:", data.token);
+
+      setPairingToken(data.token);
+      startPairingPolling(data.token);
+    } catch (e) {
+      console.error("Erreur pairing:", e);
     }
-
-    // 🔥 évite crash JSON
-    const data = await res.json();
-
-    if (!data.token) {
-      console.error("Pas de token reçu", data);
-      return;
-    }
-
-    console.log("TOKEN:", data.token);
-
-    setPairingToken(data.token);
-    startPairingPolling(data.token);
-
-  } catch (e) {
-    console.error("Erreur pairing:", e);
   }
-}
 
   function startPairingPolling(token) {
     const interval = setInterval(async () => {
@@ -207,8 +212,7 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver =
-        match.score.serving === "player" ? "opponent" : "player";
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver);
     }
   }
@@ -223,7 +227,7 @@ export default function WatchPage() {
     const pairingUrl = `${window.location.origin}/connect?token=${pairingToken}`;
 
     const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      pairingUrl
+      pairingUrl,
     )}`;
 
     return (

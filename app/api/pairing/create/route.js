@@ -16,6 +16,8 @@ export async function POST() {
     expires_at: Date.now() + 1000 * 60 * 10,
   };
 
+  console.log("STORE AFTER CREATE:", pairingStore);
+
   return new Response(JSON.stringify({ token }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
