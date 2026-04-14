@@ -243,29 +243,6 @@ export default function WatchPage() {
     );
   }
 
-  // ---------- PREVIEW ----------
-  if (!showPreview) {
-    return (
-      <div style={{ ...centered, flexDirection: "column" }}>
-        {match?.stream_url ? (
-          <video
-            src={match.stream_url}
-            autoPlay
-            muted
-            playsInline
-            style={{ width: "100%" }}
-          />
-        ) : (
-          <p>En attente du stream...</p>
-        )}
-
-        <button onClick={() => setShowPreview(true)} style={btnGreen}>
-          ▶ Commencer
-        </button>
-      </div>
-    );
-  }
-
   // ---------- NO MATCH ----------
   if (!match) {
     return <div style={centered}>Aucun match connecté</div>;
