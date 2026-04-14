@@ -29,99 +29,80 @@ export default function WatchPage() {
   const [match, setMatch] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [serviceFaults, setServiceFaults] = useState(0);
   const [pointHistory, setPointHistory] = useState([]);
 
-  // NEW
+  // 🔥 pairing
   const [pairingToken, setPairingToken] = useState(null);
 
   // ---------- INIT ----------
   useEffect(() => {
-    init();
+    createPairing();
   }, []);
-
-  async function init() {
-  await createPairing();
-  setLoading(false); // 🔥 on débloque direct l’UI
-}
 
   // ---------- PAIRING ----------
   async function createPairing() {
-    const res = await fetch("/api/pairing/create", {
-      method: "POST",
-    });
+    try {
+      const res = await fetch("/api/pairing/create", {
+        method: "POST",
+      });
 
-    const data = await res.json();
-    setPairingToken(data.token);
+      const data = await res.json();
+      setPairingToken(data.token);
 
-    startPairingPolling(data.token);
+      startPairingPolling(data.token);
+    } catch (e) {
+      console.error("Erreur pairing:", e);
+    }
   }
 
   function startPairingPolling(token) {
     const interval = setInterval(async () => {
-      const res = await fetch(`/api/pairing/${token}`);
-      const data = await res.json();
+      try {
+        const res = await fetch(`/api/pairing/${token}`);
+        if (!res.ok) return;
 
-      if (data.connected && data.match_id) {
-        setIsConnected(true);
+        const data = await res.json();
 
-        const resMatch = await fetch(`/api/matches/${data.match_id}`, {
-          credentials: "include",
-        });
+        if (data.connected && data.match_id) {
+          setIsConnected(true);
 
-        const matchData = await resMatch.json();
-        setMatch(matchData);
+          // 🔥 charger match UNIQUEMENT ici
+          const resMatch = await fetch(`/api/matches/${data.match_id}`, {
+            credentials: "include",
+          });
 
-        clearInterval(interval);
+          if (resMatch.ok) {
+            const matchData = await resMatch.json();
+            setMatch(matchData);
+
+            startPolling(matchData._id);
+          }
+
+          clearInterval(interval);
+        }
+      } catch (e) {
+        console.log("Polling pairing error");
       }
     }, 1500);
   }
 
-  // ---------- Load match ----------
-  async function loadMatch() {
-    let data = [];
-
-    const res = await fetch("/api/matches", {
-      credentials: "include",
-    });
-    data = await res.json();
-
-    let activeMatch = null;
-
-    if (matchId) {
-      activeMatch = data.find((m) => m._id === matchId);
-    } else {
-      activeMatch = data[0];
-    }
-
-    if (activeMatch) {
-      setMatch(activeMatch);
-
-      if (activeMatch.is_streaming) {
-        setIsConnected(true);
-      }
-
-      startPolling(activeMatch._id);
-    }
-
-    setLoading(false);
-  }
-
-  // ---------- Polling ----------
+  // ---------- Polling match ----------
   function startPolling(id) {
     const interval = setInterval(async () => {
       if (!id) return;
 
-      const res = await fetch(`/api/matches/${id}`, {
-        credentials: "include",
-      });
+      try {
+        const res = await fetch(`/api/matches/${id}`, {
+          credentials: "include",
+        });
 
-      const updated = await res.json();
-      setMatch(updated);
+        if (!res.ok) return;
 
-      if (updated.is_streaming && updated.stream_status === "live") {
-        setIsConnected(true);
+        const updated = await res.json();
+        setMatch(updated);
+      } catch (e) {
+        console.log("Polling match error");
       }
     }, 1500);
 
@@ -214,34 +195,24 @@ export default function WatchPage() {
     }
   }
 
-  // ---------- Loading ----------
-  if (loading) {
-    return <div style={centered}>Chargement...</div>;
+  // ---------- INIT SCREEN ----------
+  if (!pairingToken) {
+    return <div style={centered}>Initialisation...</div>;
   }
 
   // ---------- QR CONNECTION ----------
   if (!isConnected) {
-    const pairingUrl = pairingToken
-      ? `${window.location.origin}/connect?token=${pairingToken}`
-      : null;
+    const pairingUrl = `${window.location.origin}/connect?token=${pairingToken}`;
 
-    const qr = pairingUrl
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-          pairingUrl
-        )}`
-      : null;
+    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+      pairingUrl
+    )}`;
 
     return (
       <div style={centered}>
         <div style={{ textAlign: "center" }}>
           <p style={{ color: "#4ade80" }}>Connecter le téléphone</p>
-
-          {qr ? (
-            <img src={qr} width={180} />
-          ) : (
-            <p>Génération du QR...</p>
-          )}
-
+          <img src={qr} width={180} />
           <p style={{ fontSize: 12, color: "#666" }}>
             Scanne avec le téléphone
           </p>
@@ -275,7 +246,7 @@ export default function WatchPage() {
 
   // ---------- NO MATCH ----------
   if (!match) {
-    return <div style={centered}>Aucun match</div>;
+    return <div style={centered}>Aucun match connecté</div>;
   }
 
   // ---------- SCORING UI ----------
