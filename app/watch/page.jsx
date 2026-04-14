@@ -230,6 +230,63 @@ export default function WatchPage() {
         padding: 3,
       }}
     >
+      {/* QR OVERLAY (non bloquant) */}
+      {/* FULLSCREEN QR MODE (Apple Watch friendly) */}
+      {!isConnected && pairingToken && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            padding: 20,
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              color: "#4ade80",
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            Connecter la montre
+          </p>
+
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=${encodeURIComponent(
+              `${window.location.origin}/connect?token=${pairingToken}`,
+            )}`}
+            width={320}
+            height={320}
+            style={{
+              background: "#fff",
+              padding: 10,
+              borderRadius: 12,
+            }}
+          />
+
+          <p
+            style={{
+              color: "#666",
+              fontSize: 12,
+              maxWidth: 240,
+              lineHeight: 1.4,
+            }}
+          >
+            Scanne ce code depuis le téléphone ou Apple Watch pour connecter le
+            match
+          </p>
+        </div>
+      )}
+
       {/* Zone 1 */}
       <button
         onClick={() => scorePoint("player", "Faute directe", false)}
