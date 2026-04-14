@@ -15,5 +15,8 @@ export async function POST() {
     expires_at: Date.now() + 1000 * 60 * 10,
   };
 
-  return Response.json({ token });
+  return new Response(JSON.stringify({ token }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
