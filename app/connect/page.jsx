@@ -10,17 +10,21 @@ export default function ConnectPage() {
   const [matches, setMatches] = useState([]);
 
   useEffect(() => {
+    if (!token) return;
     loadMatches();
-  }, []);
+  }, [token]);
 
   async function loadMatches() {
-    const res = await fetch("/api/matches", {
+    const res = await fetch("/api/matches?status=En%20cours", {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
+        "x-pairing-token": token, // ✅ FIX
       },
     });
+
+    if (!res.ok) return;
+
     const data = await res.json();
     setMatches(data);
   }
@@ -30,7 +34,7 @@ export default function ConnectPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
+        "x-pairing-token": token, // ✅ FIX
       },
       body: JSON.stringify({ token, match_id }),
     });
@@ -40,7 +44,11 @@ export default function ConnectPage() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Choisir un match</h2>
+      <h2>Choisir un match en cours</h2>
+
+      {matches.length === 0 && (
+        <p style={{ color: "#666" }}>Aucun match en cours</p>
+      )}
 
       {matches.map((m) => (
         <button
@@ -48,7 +56,7 @@ export default function ConnectPage() {
           onClick={() => connect(m._id)}
           style={{ display: "block", marginBottom: 10 }}
         >
-          {m.player1} vs {m.player2}
+          {m.player_name} vs {m.opponent_name}
         </button>
       ))}
     </div>
