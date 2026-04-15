@@ -1,71 +1,70 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../lib/db";
-import { getUser } from "../../../lib/auth";
-import Match from "../../../models/Match";
-import Pairing from "../../../models/Pairing"; // 🔥 à ajouter
+import { connectDB } from "@/lib/db";
+import { getUser } from "@/lib/auth";
+import Match from "@/models/Match";
 
+// ---------- GET MATCHES ----------
 export async function GET(request) {
-  await connectDB();
+  try {
+    await connectDB();
 
-  const user = getUser(request);
-  const { searchParams } = new URL(request.url);
+    const user = getUser(request);
 
-  // 🔥 CAS 1 : utilisateur connecté
-  if (user) {
-    const filter = { userId: user.id };
+    const { searchParams } = new URL(request.url);
 
-    if (searchParams.get("status")) {
-      filter.status = searchParams.get("status");
+    const filter = {};
+
+    // ⚠️ sécurité : seulement si user connecté
+    if (user) {
+      filter.userId = user.id;
     }
 
-    const limit = parseInt(searchParams.get("limit")) || 50;
+    const status = searchParams.get("status");
+    if (status) filter.status = status;
+
+    const limitRaw = searchParams.get("limit");
+    const limit = Number.isNaN(parseInt(limitRaw)) ? 50 : parseInt(limitRaw);
 
     const matches = await Match.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit);
 
     return NextResponse.json(matches);
+  } catch (err) {
+    console.error("GET /api/matches ERROR:", err);
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  // 🔥 CAS 2 : accès via pairing token (montre)
-  const token = request.headers.get("x-pairing-token");
-
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const pairing = await Pairing.findOne({ token });
-
-  if (!pairing || !pairing.match_id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const match = await Match.findById(pairing.match_id);
-
-  if (!match) {
-    return NextResponse.json({ error: "Match not found" }, { status: 404 });
-  }
-
-  // ⚠️ la montre reçoit UN SEUL match
-  return NextResponse.json([match]);
 }
 
+// ---------- CREATE MATCH ----------
 export async function POST(request) {
-  const user = getUser(request);
+  try {
+    await connectDB();
 
-  // ❌ création interdite depuis la montre
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = getUser(request);
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+
+    const match = await Match.create({
+      ...body,
+      userId: user.id,
+    });
+
+    return NextResponse.json(match, { status: 201 });
+  } catch (err) {
+    console.error("POST /api/matches ERROR:", err);
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
-
-  await connectDB();
-
-  const body = await request.json();
-
-  const match = await Match.create({
-    ...body,
-    userId: user.id,
-  });
-
-  return NextResponse.json(match, { status: 201 });
 }

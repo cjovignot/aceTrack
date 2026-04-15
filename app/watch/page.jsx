@@ -51,7 +51,6 @@ export default function WatchPage() {
 
     async function loadMatch() {
       const res = await fetch(`/api/matches/${matchId}`, {
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "x-pairing-token": pairingToken,
@@ -119,7 +118,6 @@ export default function WatchPage() {
       if (isUpdatingRef.current) return; // 🔥 bloque vraiment
 
       const res = await fetch(`/api/matches/${id}`, {
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "x-pairing-token": pairingToken,
@@ -168,7 +166,6 @@ export default function WatchPage() {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
       },
-      credentials: "include",
       body: JSON.stringify(updated),
     });
 
@@ -178,7 +175,6 @@ export default function WatchPage() {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
       },
-      credentials: "include",
       body: JSON.stringify({
         match_id: match._id,
         point_winner: winner,
@@ -202,7 +198,6 @@ export default function WatchPage() {
     isUpdatingRef.current = true;
 
     const res = await fetch(`/api/points?match_id=${match._id}`, {
-      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
@@ -239,7 +234,6 @@ export default function WatchPage() {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
       },
-      credentials: "include",
       body: JSON.stringify(restored),
     });
 
@@ -249,7 +243,6 @@ export default function WatchPage() {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
       },
-      credentials: "include",
     });
 
     // 🔥 IMPORTANT : laisse le polling reprendre proprement
