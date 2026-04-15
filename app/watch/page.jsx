@@ -29,7 +29,6 @@ export default function WatchPage() {
   const [isConnected, setIsConnected] = useState(false);
 
   const [serviceFaults, setServiceFaults] = useState(0);
-  const [pointHistory, setPointHistory] = useState([]);
   const [lastPoint, setLastPoint] = useState(null);
 
   const [pairingToken, setPairingToken] = useState(null);
@@ -37,6 +36,7 @@ export default function WatchPage() {
   const hasStarted = useRef(false);
   const pairingIntervalRef = useRef(null);
   const matchIntervalRef = useRef(null);
+  const isUpdatingRef = useRef(false);
 
   // ---------- INIT ----------
   useEffect(() => {
@@ -101,6 +101,8 @@ export default function WatchPage() {
     if (matchIntervalRef.current) return;
 
     matchIntervalRef.current = setInterval(async () => {
+      if (isUpdatingRef.current) return; // 🔥 IMPORTANT
+
       const res = await fetch(`/api/matches/${id}`, {
         credentials: "include",
       });
@@ -118,6 +120,8 @@ export default function WatchPage() {
 
     setServiceFaults(0);
 
+    const previousScore = JSON.parse(JSON.stringify(match.score));
+
     const result = addPoint(match.score, winner);
 
     const updated = {
@@ -131,7 +135,7 @@ export default function WatchPage() {
     setMatch(updated);
 
     await fetch(`/api/matches/${match._id}`, {
-      method: "PUT",
+      method: "PUT", // ⚠️ pas PUT
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify(updated),
@@ -145,6 +149,9 @@ export default function WatchPage() {
         match_id: match._id,
         point_winner: winner,
         timestamp: new Date(),
+
+        // 🔥 clé de l’undo
+        score_at_point: JSON.stringify(previousScore),
       }),
     });
 
@@ -154,32 +161,53 @@ export default function WatchPage() {
 
   // ---------- UNDO ----------
   async function handleUndo() {
-    if (!pointHistory.length || !match) return;
+    if (!match) return;
 
-    const { log, prevScore, prevStatus } = pointHistory[0];
+    isUpdatingRef.current = true; // 🔥 bloque polling
 
-    setPointHistory((p) => p.slice(1));
+    const res = await fetch(`/api/points?match_id=${match._id}`, {
+      credentials: "include",
+    });
+
+    const points = await res.json();
+    if (!points.length) {
+      isUpdatingRef.current = false;
+      return;
+    }
+
+    const lastPoint = points[0];
+    if (!lastPoint.score_at_point) {
+      isUpdatingRef.current = false;
+      return;
+    }
+
+    const previousScore = JSON.parse(lastPoint.score_at_point);
 
     const restored = {
       ...match,
-      score: prevScore,
-      status: prevStatus,
+      score: previousScore,
+      status: "En cours",
       winner: null,
     };
 
     setMatch(restored);
 
     await fetch(`/api/matches/${match._id}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify(restored),
     });
 
-    await fetch(`/api/points/${log._id}`, {
+    await fetch(`/api/points/${lastPoint._id}`, {
       method: "DELETE",
       credentials: "include",
     });
+
+    // laisse le temps à la DB d'être cohérente
+    setTimeout(() => {
+      isUpdatingRef.current = false;
+    }, 500);
   }
 
   function handleServiceFault() {

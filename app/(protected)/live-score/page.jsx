@@ -31,50 +31,68 @@ export default function LiveScorePage() {
 
   async function scorePoint(winner) {
     if (!match) return;
-    setScoreHistory((prev) => [
-      ...prev,
-      JSON.parse(JSON.stringify(match.score)),
-    ]);
+
+    const previousScore = JSON.parse(JSON.stringify(match.score));
+    const previousStatus = match.status;
+
     const result = addPoint(match.score, winner);
+
     const updates = { score: result.score };
+
     if (result.matchWon) {
       updates.status = "Terminé";
       updates.winner = result.matchWinner;
       updates.duration_minutes = Math.round(elapsed / 60);
       clearInterval(timer.current);
     }
+
+    // 1. update match
     const res = await api.patch("/api/matches/" + match._id, updates);
     setMatch(res.data);
-    const pr = await api
-      .post("/api/points", {
-        match_id: match._id,
-        point_winner: winner,
-        shot_type: "Coup droit",
-        timestamp: new Date().toISOString(),
-      })
-      .catch(() => null);
-    if (pr?.data) setPointHistory((prev) => [pr.data, ...prev]);
+
+    // 2. log point avec score AVANT le point (clé pour undo)
+    await api.post("/api/points", {
+      match_id: match._id,
+      point_winner: winner,
+      shot_type: "Coup droit",
+      timestamp: new Date().toISOString(),
+      score_at_point: JSON.stringify(previousScore), // 🔥 IMPORTANT
+    });
   }
 
   async function handleUndo() {
-    if (!match || scoreHistory.length === 0) return;
-    const previousScore = scoreHistory[scoreHistory.length - 1];
-    setMatch((m) => ({
-      ...m,
+    if (!match) return;
+
+    // 1. récupérer dernier point depuis DB
+    const { data: points } = await api.get("/api/points?match_id=" + match._id);
+
+    if (!points.length) return;
+
+    const lastPoint = points[0];
+
+    if (!lastPoint.score_at_point) return;
+
+    const previousScore = JSON.parse(lastPoint.score_at_point);
+
+    const restored = {
+      ...match,
       score: previousScore,
       status: "En cours",
       winner: null,
-    }));
-    setScoreHistory((prev) => prev.slice(0, -1));
-    if (pointHistory.length > 0) {
-      await api.delete("/api/points/" + pointHistory[0]._id).catch(() => {});
-      setPointHistory((prev) => prev.slice(1));
-    }
+    };
+
+    // 2. update UI
+    setMatch(restored);
+
+    // 3. update DB match
     await api.patch("/api/matches/" + match._id, {
       score: previousScore,
       status: "En cours",
       winner: null,
     });
+
+    // 4. supprimer le point
+    await api.delete("/api/points/" + lastPoint._id);
   }
 
   async function handleEndMatch() {
