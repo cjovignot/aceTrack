@@ -89,7 +89,11 @@ export default function LiveScorePage() {
 
   const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
   if (!match) {
-    return <div style={centered}>Chargement du match...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-400">
+        Chargement du match...
+      </div>
+    );
   }
   return (
     <div className="max-w-lg px-4 py-6 mx-auto">
