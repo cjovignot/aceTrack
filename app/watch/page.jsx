@@ -198,6 +198,7 @@ export default function WatchPage() {
       credentials: "include",
       body: JSON.stringify(restored),
     });
+    // push
 
     await fetch(`/api/points/${lastPoint._id}`, {
       method: "DELETE",
