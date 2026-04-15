@@ -52,6 +52,10 @@ export default function WatchPage() {
     async function loadMatch() {
       const res = await fetch(`/api/matches/${matchId}`, {
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
       });
 
       if (res.ok) {
@@ -68,7 +72,13 @@ export default function WatchPage() {
   async function createPairing() {
     if (pairingToken) return;
 
-    const res = await fetch("/api/pairing/create", { method: "POST" });
+    const res = await fetch("/api/pairing/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+    });
     if (!res.ok) return;
 
     const data = await res.json();
@@ -82,7 +92,12 @@ export default function WatchPage() {
     if (pairingIntervalRef.current) return;
 
     pairingIntervalRef.current = setInterval(async () => {
-      const res = await fetch(`/api/pairing/${token}`);
+      const res = await fetch(`/api/pairing/${token}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+      });
       if (!res.ok) return;
 
       const data = await res.json();
@@ -101,22 +116,35 @@ export default function WatchPage() {
     if (matchIntervalRef.current) return;
 
     matchIntervalRef.current = setInterval(async () => {
-      if (isUpdatingRef.current) return; // 🔥 IMPORTANT
+      if (isUpdatingRef.current) return; // 🔥 bloque vraiment
 
       const res = await fetch(`/api/matches/${id}`, {
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
       });
 
       if (!res.ok) return;
 
       const updated = await res.json();
-      setMatch(updated);
+
+      setMatch((prev) => {
+        // 🔥 évite overwrite inutile
+        if (JSON.stringify(prev?.score) === JSON.stringify(updated.score)) {
+          return prev;
+        }
+        return updated;
+      });
     }, 1500);
   }
 
   // ---------- SCORE ----------
   async function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
     if (!match) return;
+
+    isUpdatingRef.current = true; // 🔥 bloque polling
 
     setServiceFaults(0);
 
@@ -135,38 +163,50 @@ export default function WatchPage() {
     setMatch(updated);
 
     await fetch(`/api/matches/${match._id}`, {
-      method: "PUT", // ⚠️ pas PUT
-      headers: { "Content-Type": "application/json" },
+      method: "PATCH", // ✅ FIX
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
       credentials: "include",
       body: JSON.stringify(updated),
     });
 
     await fetch("/api/points", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
       credentials: "include",
       body: JSON.stringify({
         match_id: match._id,
         point_winner: winner,
         timestamp: new Date(),
-
-        // 🔥 clé de l’undo
-        score_at_point: JSON.stringify(previousScore),
+        score_at_point: JSON.stringify(previousScore), // 🔥 clé undo
       }),
     });
 
     setLastPoint(winner);
     setTimeout(() => setLastPoint(null), 150);
+
+    setTimeout(() => {
+      isUpdatingRef.current = false; // 🔥 libère polling après DB
+    }, 800);
   }
 
   // ---------- UNDO ----------
   async function handleUndo() {
     if (!match) return;
 
-    isUpdatingRef.current = true; // 🔥 bloque polling
+    isUpdatingRef.current = true;
 
     const res = await fetch(`/api/points?match_id=${match._id}`, {
       credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
     });
 
     const points = await res.json();
@@ -176,6 +216,7 @@ export default function WatchPage() {
     }
 
     const lastPoint = points[0];
+
     if (!lastPoint.score_at_point) {
       isUpdatingRef.current = false;
       return;
@@ -193,22 +234,28 @@ export default function WatchPage() {
     setMatch(restored);
 
     await fetch(`/api/matches/${match._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method: "PATCH", // ✅ FIX
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
       credentials: "include",
       body: JSON.stringify(restored),
     });
-    // push
 
     await fetch(`/api/points/${lastPoint._id}`, {
       method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
       credentials: "include",
     });
 
-    // laisse le temps à la DB d'être cohérente
+    // 🔥 IMPORTANT : laisse le polling reprendre proprement
     setTimeout(() => {
       isUpdatingRef.current = false;
-    }, 500);
+    }, 800);
   }
 
   function handleServiceFault() {

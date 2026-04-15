@@ -16,6 +16,10 @@ export default function ConnectPage() {
   async function loadMatches() {
     const res = await fetch("/api/matches", {
       credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
     });
     const data = await res.json();
     setMatches(data);
@@ -26,6 +30,7 @@ export default function ConnectPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
       },
       body: JSON.stringify({ token, match_id }),
     });
