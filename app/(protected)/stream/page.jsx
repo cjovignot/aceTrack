@@ -57,11 +57,13 @@ export default function StreamPage() {
   const video = videoRef.current;
   const ctx = canvas.getContext("2d");
 
+  const isSafari = !("requestVideoFrameCallback" in HTMLVideoElement.prototype);
+
   const draw = () => {
     if (!video || !canvas) return;
 
     if (video.videoWidth === 0) {
-      video.requestVideoFrameCallback(draw);
+      loop();
       return;
     }
 
@@ -89,11 +91,18 @@ export default function StreamPage() {
       ctx.restore();
     }
 
-    video.requestVideoFrameCallback(draw);
+    loop();
   };
 
-  // 🔥 LANCEMENT
-  video.requestVideoFrameCallback(draw);
+  const loop = () => {
+    if (isSafari) {
+      requestAnimationFrame(draw);
+    } else {
+      video.requestVideoFrameCallback(draw);
+    }
+  };
+
+  loop();
 
   return () => {};
 }, [isStreaming, activeMatch]);
@@ -361,13 +370,23 @@ export default function StreamPage() {
   chunksRef.current = [];
   setRecordingSize(0);
 
-  const stream = canvasRef.current.captureStream(60);
+  const stream = canvasRef.current.captureStream(30); // 🔥 30 FPS
 
-  const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-    ? "video/mp4"
-    : "video/webm";
+  let mimeType = "";
 
-  const recorder = new MediaRecorder(stream, { mimeType });
+  // Safari fallback
+  if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+    mimeType = "video/webm;codecs=vp9";
+  } else if (MediaRecorder.isTypeSupported("video/webm")) {
+    mimeType = "video/webm";
+  } else {
+    mimeType = ""; // Safari fallback auto
+  }
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: 5_000_000,
+  });
 
   recorderRef.current = recorder;
 
@@ -397,20 +416,17 @@ export default function StreamPage() {
 function downloadRecording(mimeType) {
   if (!chunksRef.current.length) return;
 
-  const isMp4 = mimeType.includes("mp4");
-
   const blob = new Blob(chunksRef.current, {
-    type: isMp4 ? "video/mp4" : "video/webm",
+    type: mimeType || "video/webm",
   });
 
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
   a.href = url;
-  a.download =
-    "match-" +
-    (activeMatch?._id || Date.now()) +
-    (isMp4 ? ".mp4" : ".webm");
+
+  // Safari n’aime pas mp4 ici
+  a.download = `match-${activeMatch?._id || Date.now()}.webm`;
 
   a.click();
 
