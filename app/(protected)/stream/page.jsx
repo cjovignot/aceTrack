@@ -2,11 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import api from "../../../lib/api";
 import ScoreBoard from "../../../components/ScoreBoard";
-import { Circle, Square, Video, VideoOff } from "lucide-react";
+import { Circle, Square, Video, VideoOff, ArrowLeft } from "lucide-react";
 
 export default function StreamPage() {
+  const router = useRouter();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
@@ -30,7 +32,9 @@ export default function StreamPage() {
     const video = videoRef.current;
     const ctx = canvas.getContext("2d");
 
-    const isSafari = !("requestVideoFrameCallback" in HTMLVideoElement.prototype);
+    const isSafari = !(
+      "requestVideoFrameCallback" in HTMLVideoElement.prototype
+    );
 
     const draw = () => {
       if (!video || !canvas) return;
@@ -81,7 +85,7 @@ export default function StreamPage() {
         ctx.save();
         const scale = width / 1280;
         ctx.scale(scale, scale);
-        drawScoreboard(ctx, activeMatch);
+        drawScoreboard(ctx, activeMatch, canvas.width, canvas.height);
         ctx.restore();
       }
 
@@ -184,41 +188,57 @@ export default function StreamPage() {
   }
 
   // ---------------- SCOREBOARD ----------------
-  function drawScoreboard(ctx, match) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(20, 20, 200, 60);
+  function drawScoreboard(ctx, match, canvasWidth, canvasHeight) {
+    const padding = 20;
 
+    const boxWidth = 220;
+    const boxHeight = 70;
+
+    const x = padding;
+    const y = canvasHeight - boxHeight - padding;
+
+    // background
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(x, y, boxWidth, boxHeight);
+
+    // text
     ctx.fillStyle = "white";
     ctx.font = "14px Arial";
-    ctx.fillText(match.player_name || "Player", 30, 45);
-    ctx.fillText(match.opponent_name || "Opponent", 30, 65);
+
+    ctx.fillText(match.player_name || "Player", x + 10, y + 25);
+    ctx.fillText(match.opponent_name || "Opponent", x + 10, y + 50);
   }
 
   // ---------------- UI ----------------
   return (
     <div className="fixed inset-0 bg-black">
-
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => router.back()}
+        className="absolute z-50 p-3 text-gray-500 rounded-full top-4 left-4 bg-black/50 backdrop-blur-md"
+      >
+        <ArrowLeft className="w-7 h-7" />
+      </button>
       <video ref={videoRef} autoPlay playsInline muted className="hidden" />
 
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 object-cover w-full h-full"
       />
 
       {/* CONTROLS */}
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-6">
-
+      <div className="absolute left-0 right-0 flex justify-center gap-6 bottom-6">
         {!isStreaming ? (
           <button
             onClick={startCamera}
-            className="bg-green-600 text-white px-6 py-3 rounded-full"
+            className="px-6 py-3 text-white bg-green-600 rounded-full"
           >
             <Video />
           </button>
         ) : (
           <button
             onClick={stopCamera}
-            className="bg-red-600 text-white px-6 py-3 rounded-full"
+            className="px-6 py-3 text-white bg-red-600 rounded-full"
           >
             <VideoOff />
           </button>
@@ -227,7 +247,7 @@ export default function StreamPage() {
         {isStreaming && !isRecording && (
           <button
             onClick={startRecording}
-            className="bg-white text-red-600 px-6 py-3 rounded-full"
+            className="px-6 py-3 text-red-600 bg-white rounded-full"
           >
             <Circle />
           </button>
@@ -236,7 +256,7 @@ export default function StreamPage() {
         {isRecording && (
           <button
             onClick={stopRecording}
-            className="bg-red-700 text-white px-6 py-3 rounded-full"
+            className="px-6 py-3 text-white bg-red-700 rounded-full"
           >
             <Square />
           </button>
