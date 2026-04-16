@@ -16,8 +16,8 @@
   }
 }
 
-:root {
-  --app-navbar-height: 64px;
+canvas {
+  background: black;
 }
 
 ::-webkit-scrollbar {

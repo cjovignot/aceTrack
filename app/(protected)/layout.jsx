@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Home, Watch, Radio, User } from "lucide-react";
 
 const nav = [
@@ -13,14 +15,25 @@ const nav = [
 export default function ProtectedLayout({ children }) {
   const appName = "aceTrack";
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
 
-  const hideNav = pathname.startsWith("/stream");
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+
+    const update = () => setIsMobile(mq.matches);
+    update();
+
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const hideNavOnStreamMobile = pathname === "/stream" && isMobile;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <main className="flex-1 pb-20 md:pb-0 md:pl-20">{children}</main>
 
-      {!hideNav && (
+      {!hideNavOnStreamMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white border-t border-gray-100 md:top-0 md:bottom-0 md:right-auto md:w-20 md:border-t-0 md:border-r md:h-auto">
           <div className="flex items-center justify-around h-full md:flex-col md:h-full md:py-6 md:justify-start md:gap-2 md:px-2">
             <div className="items-center justify-center hidden w-12 h-12 mb-4 text-lg font-bold text-white bg-green-600 md:flex rounded-xl">
