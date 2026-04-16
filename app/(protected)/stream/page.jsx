@@ -448,6 +448,8 @@ function downloadRecording(mimeType) {
   URL.revokeObjectURL(url);
 }
 
+const mbRecorded = (recordingSize / 1024 / 1024).toFixed(1);
+
   // ---------------- UI ----------------
 
   return (
