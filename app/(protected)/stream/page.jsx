@@ -62,73 +62,40 @@ export default function StreamPage() {
 
     let last = performance.now();
 
-    const draw = (t) => {
+    const draw = () => {
+  if (!video || !canvas) return;
 
-      const delta = t - last;
+  if (video.videoWidth === 0) {
+    video.requestVideoFrameCallback(draw);
+    return;
+  }
 
-      last = t;
+  if (canvas.width !== video.videoWidth) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
 
-      if (!video || !canvas) return;
+  // DRAW VIDEO
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      if (video.videoWidth === 0) {
+  // OVERLAY
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+  gradient.addColorStop(1, "rgba(0,0,0,0.05)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        animationRef.current = requestAnimationFrame(draw);
+  // SCOREBOARD
+  if (activeMatch?.score) {
+    ctx.save();
+    const scale = canvas.width / 1280;
+    ctx.scale(scale, scale);
+    drawScoreboard(ctx, activeMatch);
+    ctx.restore();
+  }
 
-        return;
-
-      }
-
-      if (canvas.width !== video.videoWidth) {
-
-        canvas.width = video.videoWidth;
-
-        canvas.height = video.videoHeight;
-
-      }
-
-      // 1. VIDEO
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // 2. overlay léger (optionnel)
-
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-
-      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
-
-      gradient.addColorStop(1, "rgba(0,0,0,0.05)");
-
-      ctx.fillStyle = gradient;
-
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // 3. SCOREBOARD (SCALED)
-
-      if (activeMatch?.score) {
-
-        ctx.save();
-
-        const baseWidth = 1280;
-
-        const scale = canvas.width / baseWidth;
-
-        ctx.scale(scale, scale);
-
-        drawScoreboard(ctx, activeMatch);
-
-        ctx.restore();
-
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
-
-    };
-
-    animationRef.current = requestAnimationFrame(draw);
-
-    return () => cancelAnimationFrame(animationRef.current);
-
-  }, [isStreaming, activeMatch]);
+  video.requestVideoFrameCallback(draw);
+};
 
   // ---------------- LOAD MATCHES ----------------
 
