@@ -275,136 +275,96 @@ export default function StreamPage() {
   // ---------------- SCOREBOARD ----------------
 
   function drawScoreboard(ctx, match) {
+  const score = match.score || {};
 
-    const score = match.score || {};
+  const sP = score.sets_player || [];
+  const sO = score.sets_opponent || [];
+  const sets = Math.max(sP.length, sO.length);
 
-    const sP = score.sets_player || [];
+  const x = 20;
+  const y = 20;
 
-    const sO = score.sets_opponent || [];
+  const colName = 90;
+  const colSet = 20;
+  const colPts = 28;
 
-    const sets = Math.max(sP.length, sO.length);
+  const rowH = 22;
+  const headerH = 16;
 
-    const x = 20;
+  const width = colName + sets * colSet + colPts;
+  const height = headerH + rowH * 2;
 
-    const y = 20;
+  // -------- BG --------
+  ctx.fillStyle = "rgba(0,0,0,0.75)";
+  ctx.fillRect(x, y, width, height);
 
-    const colName = 90;
+  // -------- GRID --------
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth = 1;
 
-    const colSet = 20;
+  ctx.beginPath();
+  ctx.moveTo(x, y + headerH);
+  ctx.lineTo(x + width, y + headerH);
+  ctx.stroke();
 
-    const colPts = 28;
+  ctx.beginPath();
+  ctx.moveTo(x, y + headerH + rowH);
+  ctx.lineTo(x + width, y + headerH + rowH);
+  ctx.stroke();
 
-    const rowH = 22;
+  // -------- HEADER --------
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.font = "8px Arial";
 
-    const headerH = 16;
+  ctx.fillText("JOUEUR", x + 4, y + 11);
 
-    const width = colName + sets * colSet + colPts;
+  for (let i = 0; i < sets; i++) {
+    ctx.fillText("S" + (i + 1), x + colName + i * colSet + 4, y + 11);
+  }
 
-    const height = headerH + rowH * 2;
+  ctx.fillText("PTS", x + colName + sets * colSet + 4, y + 11);
 
-    // BG
+  // -------- ROWS --------
+  const rows = [
+    ["player", match.player_name, sP, score.current_game_player],
+    ["opponent", match.opponent_name, sO, score.current_game_opponent],
+  ];
 
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
+  rows.forEach(([who, name, sets_arr, pts], ri) => {
+    const yRow = y + headerH + rowH * ri;
 
-    ctx.fillRect(x, y, width, height);
-
-    // GRID
-
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
-
-    ctx.lineWidth = 1;
-
-    ctx.beginPath();
-
-    ctx.moveTo(x, y + headerH);
-
-    ctx.lineTo(x + width, y + headerH);
-
-    ctx.stroke();
-
-    ctx.beginPath();
-
-    ctx.moveTo(x, y + headerH + rowH);
-
-    ctx.lineTo(x + width, y + headerH + rowH);
-
-    ctx.stroke();
-
-    // HEADER
-
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-
-    ctx.font = "8px Arial";
-
-    ctx.fillText("JOUEUR", x + 4, y + 11);
-
-    for (let i = 0; i < sets; i++) {
-
-      ctx.fillText("S" + (i + 1), x + colName + i * colSet + 4, y + 11);
-
+    // service dot
+    if (score.serving === who) {
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.arc(x + 6, yRow + 11, 3, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    ctx.fillText("PTS", x + colName + sets * colSet + 4, y + 11);
+    // name
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px Arial";
+    ctx.fillText(formatName(name), x + 12, yRow + 14);
 
-    const rows = [
+    // sets
+    for (let i = 0; i < sets; i++) {
+      const val = sets_arr[i] ?? "";
+      const opp = who === "player" ? sO[i] : sP[i];
 
-      ["player", match.player_name, sP, score.current_game_player],
+      const isWinner = (val || 0) > (opp || 0);
 
-      ["opponent", match.opponent_name, sO, score.current_game_opponent],
+      ctx.fillStyle = isWinner ? "#facc15" : "rgba(255,255,255,0.7)";
+      ctx.font = "bold 12px Arial";
 
-    ];
+      ctx.fillText(val, x + colName + i * colSet + 6, yRow + 14);
+    }
 
-    rows.forEach(([who, name, sets_arr, pts], ri) => {
-
-      const yRow = y + headerH + rowH * ri;
-
-      if (score.serving === who) {
-
-        ctx.fillStyle = "#facc15";
-
-        ctx.beginPath();
-
-        ctx.arc(x + 6, yRow + 11, 3, 0, Math.PI * 2);
-
-        ctx.fill();
-
-      }
-
-      ctx.fillStyle = "#fff";
-
-      ctx.font = "10px Arial";
-
-      ctx.fillText(formatName(name), x + 12, yRow + 14);
-
-      for (let i = 0; i < sets; i++) {
-
-        const val = sets_arr[i] ?? "";
-
-        const opp = who === "player" ? sO[i] : sP[i];
-
-        const isWinner = (val || 0) > (opp || 0);
-
-        ctx.fillStyle = isWinner
-
-          ? "#facc15"
-
-          : "rgba(255,255,255,0.7)";
-
-        ctx.font = "bold 12px Arial";
-
-        ctx.fillText(val, x + colName + i * colSet + 6, yRow + 14);
-
-      }
-
-      ctx.fillStyle = "#facc15";
-
-      ctx.font = "bold 14px Arial";
-
-      ctx.fillText(pts || "0", x + colName + sets * colSet + 6, yRow + 14);
-
-    });
-
-  }
+    // points
+    ctx.fillStyle = "#facc15";
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(pts || "0", x + colName + sets * colSet + 6, yRow + 14);
+  });
+}
 
   function formatName(n) {
 
