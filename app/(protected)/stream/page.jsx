@@ -418,8 +418,6 @@ ctx.fillRect(20, 20, 180, 60); // zone scoreboard
           className="object-cover w-full h-full"
         />
         <div className="relative mb-4 overflow-hidden bg-black rounded-2xl aspect-video">
-          {/* hidden video source */}
-          <video ref={videoRef} autoPlay playsInline muted className="hidden" />
 
           {/* CANVAS OUTPUT (THIS IS WHAT IS RECORDED) */}
           <canvas ref={canvasRef} className="object-cover w-full h-full" />
