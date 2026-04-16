@@ -167,32 +167,96 @@ export default function StreamPage() {
 
   // ---------------- SCOREBOARD ----------------
   function drawScoreboard(ctx, match) {
-    const score = match.score || {};
-    const sP = score.sets_player || [];
-    const sO = score.sets_opponent || [];
-    const sets = Math.max(sP.length, sO.length);
+  const score = match.score || {};
 
-    const x = 20;
-    const y = 20;
+  const sP = score.sets_player || [];
+  const sO = score.sets_opponent || [];
+  const sets = Math.max(sP.length, sO.length);
 
-    const colName = 90;
-    const colSet = 20;
-    const colPts = 28;
+  const x = 20;
+  const y = 20;
 
-    const rowH = 22;
-    const headerH = 16;
+  const colName = 90;
+  const colSet = 20;
+  const colPts = 28;
 
-    const width = colName + sets * colSet + colPts;
-    const height = headerH + rowH * 2;
+  const rowH = 22;
+  const headerH = 16;
 
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.fillRect(x, y, width, height);
+  const width = colName + sets * colSet + colPts;
+  const height = headerH + rowH * 2;
 
+  // -------- BG --------
+  ctx.fillStyle = "rgba(0,0,0,0.75)";
+  ctx.fillRect(x, y, width, height);
+
+  // -------- GRID --------
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y + headerH);
+  ctx.lineTo(x + width, y + headerH);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x, y + headerH + rowH);
+  ctx.lineTo(x + width, y + headerH + rowH);
+  ctx.stroke();
+
+  // -------- HEADER --------
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.font = "8px Arial";
+
+  ctx.fillText("JOUEUR", x + 4, y + 11);
+
+  for (let i = 0; i < sets; i++) {
+    ctx.fillText("S" + (i + 1), x + colName + i * colSet + 4, y + 11);
+  }
+
+  ctx.fillText("PTS", x + colName + sets * colSet + 4, y + 11);
+
+  // -------- ROWS --------
+  const rows = [
+    ["player", match.player_name, sP, score.current_game_player],
+    ["opponent", match.opponent_name, sO, score.current_game_opponent],
+  ];
+
+  rows.forEach(([who, name, sets_arr, pts], ri) => {
+    const yRow = y + headerH + rowH * ri;
+
+    // service dot
+    if (score.serving === who) {
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.arc(x + 6, yRow + 11, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // name
     ctx.fillStyle = "#fff";
     ctx.font = "10px Arial";
-    ctx.fillText(match.player_name, x + 12, y + 30);
-    ctx.fillText(match.opponent_name, x + 12, y + 50);
-  }
+    ctx.fillText(formatName(name), x + 12, yRow + 14);
+
+    // sets
+    for (let i = 0; i < sets; i++) {
+      const val = sets_arr[i] ?? "";
+      const opp = who === "player" ? sO[i] : sP[i];
+
+      const isWinner = (val || 0) > (opp || 0);
+
+      ctx.fillStyle = isWinner ? "#facc15" : "rgba(255,255,255,0.7)";
+      ctx.font = "bold 12px Arial";
+
+      ctx.fillText(val, x + colName + i * colSet + 6, yRow + 14);
+    }
+
+    // points
+    ctx.fillStyle = "#facc15";
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(pts || "0", x + colName + sets * colSet + 6, yRow + 14);
+  });
+}
 
   // ---------------- RECORDING ----------------
   function startRecording() {
