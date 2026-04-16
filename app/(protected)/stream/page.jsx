@@ -51,51 +51,53 @@ export default function StreamPage() {
   // ---------------- CANVAS ----------------
 
   useEffect(() => {
+  if (!isStreaming) return;
 
-    if (!isStreaming) return;
+  const canvas = canvasRef.current;
+  const video = videoRef.current;
+  const ctx = canvas.getContext("2d");
 
-    const canvas = canvasRef.current;
+  const draw = () => {
+    if (!video || !canvas) return;
 
-    const video = videoRef.current;
+    if (video.videoWidth === 0) {
+      video.requestVideoFrameCallback(draw);
+      return;
+    }
 
-    const ctx = canvas.getContext("2d");
+    if (canvas.width !== video.videoWidth) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
 
-    let last = performance.now();
+    // VIDEO
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const draw = () => {
-  if (!video || !canvas) return;
+    // OVERLAY
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.05)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (video.videoWidth === 0) {
+    // SCOREBOARD
+    if (activeMatch?.score) {
+      ctx.save();
+      const scale = canvas.width / 1280;
+      ctx.scale(scale, scale);
+      drawScoreboard(ctx, activeMatch);
+      ctx.restore();
+    }
+
     video.requestVideoFrameCallback(draw);
-    return;
-  }
+  };
 
-  if (canvas.width !== video.videoWidth) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-  }
-
-  // DRAW VIDEO
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // OVERLAY
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "rgba(0,0,0,0.12)");
-  gradient.addColorStop(1, "rgba(0,0,0,0.05)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // SCOREBOARD
-  if (activeMatch?.score) {
-    ctx.save();
-    const scale = canvas.width / 1280;
-    ctx.scale(scale, scale);
-    drawScoreboard(ctx, activeMatch);
-    ctx.restore();
-  }
-
+  // 🔥 LANCEMENT
   video.requestVideoFrameCallback(draw);
-};
+
+  return () => {};
+}, [isStreaming, activeMatch]);
+
 
   // ---------------- LOAD MATCHES ----------------
 
