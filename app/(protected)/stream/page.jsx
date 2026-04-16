@@ -71,7 +71,8 @@ export default function StreamPage() {
       gradient.addColorStop(1, "rgba(0,0,0,0.10)");
 
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = "rgba(0,0,0,0.4)";
+ctx.fillRect(20, 20, 180, 60); // zone scoreboard
 
       // 3. SCOREBOARD (native canvas renderer)
       if (activeMatch?.score) {
