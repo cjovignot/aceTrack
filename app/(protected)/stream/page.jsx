@@ -140,8 +140,8 @@ ctx.fillRect(20, 20, 180, 60); // zone scoreboard
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+        // width: { ideal: 1920 },
+        // height: { ideal: 1080 },
       },
       audio: true,
     });
