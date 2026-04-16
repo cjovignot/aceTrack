@@ -59,40 +59,72 @@ export default function StreamPage() {
 
   const isSafari = !("requestVideoFrameCallback" in HTMLVideoElement.prototype);
 
-  const draw = () => {
-    if (!video || !canvas) return;
+const draw = () => {
+  if (!video || !canvas) return;
 
-    if (video.videoWidth === 0) {
-      loop();
-      return;
-    }
-
-    if (canvas.width !== video.videoWidth) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-    }
-
-    // VIDEO
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // OVERLAY
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "rgba(0,0,0,0.12)");
-    gradient.addColorStop(1, "rgba(0,0,0,0.05)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // SCOREBOARD
-    if (activeMatch?.score) {
-      ctx.save();
-      const scale = canvas.width / 1280;
-      ctx.scale(scale, scale);
-      drawScoreboard(ctx, activeMatch);
-      ctx.restore();
-    }
-
+  if (video.videoWidth === 0) {
     loop();
-  };
+    return;
+  }
+
+  // 🔥 FORCER FORMAT PAYSAGE 16:9
+  const targetWidth = 1280;
+  const targetHeight = 720;
+
+  if (canvas.width !== targetWidth) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+
+  // 🎥 dimensions vidéo source
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+
+  // 🔥 calcul "cover" (comme object-fit: cover)
+  const videoRatio = vw / vh;
+  const canvasRatio = targetWidth / targetHeight;
+
+  let sx, sy, sw, sh;
+
+  if (videoRatio > canvasRatio) {
+    // vidéo trop large → crop horizontal
+    sh = vh;
+    sw = vh * canvasRatio;
+    sx = (vw - sw) / 2;
+    sy = 0;
+  } else {
+    // vidéo trop haute → crop vertical
+    sw = vw;
+    sh = vw / canvasRatio;
+    sx = 0;
+    sy = (vh - sh) / 2;
+  }
+
+  // 🎬 DRAW VIDEO (crop + scale)
+  ctx.drawImage(
+    video,
+    sx, sy, sw, sh,
+    0, 0, targetWidth, targetHeight
+  );
+
+  // OVERLAY
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+  gradient.addColorStop(1, "rgba(0,0,0,0.05)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // SCOREBOARD
+  if (activeMatch?.score) {
+    ctx.save();
+    const scale = canvas.width / 1280;
+    ctx.scale(scale, scale);
+    drawScoreboard(ctx, activeMatch);
+    ctx.restore();
+  }
+
+  loop();
+};
 
   const loop = () => {
     if (isSafari) {
@@ -185,6 +217,12 @@ export default function StreamPage() {
   // ---------------- CAMERA ----------------
 
   async function startCamera() {
+  
+  if (screen.orientation && screen.orientation.lock) {
+  try {
+    await screen.orientation.lock("landscape");
+  } catch (e) {}
+}
 
     const stream = await navigator.mediaDevices.getUserMedia({
 
