@@ -387,78 +387,66 @@ export default function StreamPage() {
   // ---------------- RECORDING ----------------
 
   function startRecording() {
+  if (!canvasRef.current) return;
 
-    const stream = canvasRef.current.captureStream(60);
+  chunksRef.current = [];
+  setRecordingSize(0);
 
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+  const stream = canvasRef.current.captureStream(60);
 
-      ? "video/mp4"
+  const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+    ? "video/mp4"
+    : "video/webm";
 
-      : "video/webm";
+  const recorder = new MediaRecorder(stream, { mimeType });
 
-    const recorder = new MediaRecorder(stream, { mimeType });
+  recorderRef.current = recorder;
 
-    recorderRef.current = recorder;
+  recorder.ondataavailable = (e) => {
+    if (e.data.size > 0) {
+      chunksRef.current.push(e.data);
+      setRecordingSize((s) => s + e.data.size);
+    }
+  };
 
-    chunksRef.current = [];
+  recorder.onstop = () => {
+    downloadRecording(mimeType);
+  };
 
-    recorder.ondataavailable = (e) => {
-
-      if (e.data.size > 0) {
-
-        chunksRef.current.push(e.data);
-
-        setRecordingSize((s) => s + e.data.size);
-
-      }
-
-    };
-
-    recorder.start(1000);
-
-    setIsRecording(true);
-
-  }
+  recorder.start(1000);
+  setIsRecording(true);
+}
 
   function stopRecording() {
-
-    recorderRef.current?.stop();
-
+  if (recorderRef.current && isRecording) {
+    recorderRef.current.stop();
     recorderRef.current = null;
-
-    setIsRecording(false);
-
   }
+  setIsRecording(false);
+}
 
-  function stopAndDownload() {
+function downloadRecording(mimeType) {
+  if (!chunksRef.current.length) return;
 
-    stopRecording();
+  const isMp4 = mimeType.includes("mp4");
 
-    setTimeout(() => {
+  const blob = new Blob(chunksRef.current, {
+    type: isMp4 ? "video/mp4" : "video/webm",
+  });
 
-      const blob = new Blob(chunksRef.current, {
+  const url = URL.createObjectURL(blob);
 
-        type: "video/webm",
+  const a = document.createElement("a");
+  a.href = url;
+  a.download =
+    "match-" +
+    (activeMatch?._id || Date.now()) +
+    (isMp4 ? ".mp4" : ".webm");
 
-      });
+  a.click();
 
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-
-      a.href = url;
-
-      a.download = `match-${activeMatch?._id || Date.now()}.webm`;
-
-      a.click();
-
-      URL.revokeObjectURL(url);
-
-    }, 500);
-
-  }
-
-  const mbRecorded = (recordingSize / 1024 / 1024).toFixed(1);
+  URL.revokeObjectURL(url);
+}
 
   // ---------------- UI ----------------
 
@@ -545,6 +533,28 @@ export default function StreamPage() {
         )}
 
       </div>
+      
+      {isStreaming && (
+  <div className="mt-4 p-4 border rounded-2xl">
+    {!isRecording ? (
+      <button
+        onClick={startRecording}
+        className="flex items-center gap-2 px-5 h-11 text-red-600 border border-red-300 rounded-xl"
+      >
+        <Circle className="w-4 h-4" />
+        Start REC
+      </button>
+    ) : (
+      <button
+        onClick={stopRecording}
+        className="flex items-center gap-2 px-5 h-11 text-white bg-red-600 rounded-xl"
+      >
+        <Download className="w-4 h-4" />
+        Stop & download ({mbRecorded} MB)
+      </button>
+    )}
+  </div>
+)}
 
     </div>
 
