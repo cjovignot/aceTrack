@@ -364,28 +364,40 @@ export default function StreamPage() {
 
   // ---------------- RECORDING ----------------
 
-  function startRecording() {
-  if (!canvasRef.current) return;
+function startRecording() {
+  if (!canvasRef.current || !streamRef.current) return;
 
   chunksRef.current = [];
   setRecordingSize(0);
 
-  const stream = canvasRef.current.captureStream(30); // 🔥 30 FPS
+  const fps = 30;
+
+  // 🎥 VIDEO (canvas)
+  const canvasStream = canvasRef.current.captureStream(fps);
+
+  // 🎤 AUDIO (micro)
+  const audioTracks = streamRef.current.getAudioTracks();
+
+  // 🔗 MERGE VIDEO + AUDIO
+  const combinedStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...audioTracks,
+  ]);
 
   let mimeType = "";
 
-  // Safari fallback
-  if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-    mimeType = "video/webm;codecs=vp9";
-  } else if (MediaRecorder.isTypeSupported("video/webm")) {
-    mimeType = "video/webm";
+  if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
+    mimeType = "video/webm;codecs=vp9,opus";
+  } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+    mimeType = "video/webm;codecs=vp8,opus";
   } else {
-    mimeType = ""; // Safari fallback auto
+    mimeType = "video/webm";
   }
 
-  const recorder = new MediaRecorder(stream, {
+  const recorder = new MediaRecorder(combinedStream, {
     mimeType,
     videoBitsPerSecond: 5_000_000,
+    audioBitsPerSecond: 128_000,
   });
 
   recorderRef.current = recorder;
@@ -404,6 +416,7 @@ export default function StreamPage() {
   recorder.start(1000);
   setIsRecording(true);
 }
+
 
   function stopRecording() {
   if (recorderRef.current && isRecording) {
@@ -451,7 +464,7 @@ const mbRecorded = (recordingSize / 1024 / 1024).toFixed(1);
 
           playsInline
 
-          muted
+          // muted
 
           className="hidden"
 
