@@ -90,11 +90,11 @@ export default function StreamPage() {
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // 2. overlay léger (optionnel)
+      // 2. léger overlay cinematic (optionnel mais propre)
 
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
 
-      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+      gradient.addColorStop(0, "rgba(0,0,0,0.10)");
 
       gradient.addColorStop(1, "rgba(0,0,0,0.05)");
 
@@ -102,7 +102,7 @@ export default function StreamPage() {
 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 3. SCOREBOARD (SCALED)
+      // 3. SCOREBOARD (SCALED PROPERLY)
 
       if (activeMatch?.score) {
 
@@ -164,7 +164,7 @@ export default function StreamPage() {
 
   }, []);
 
-  // ---------------- POLLING ----------------
+  // ---------------- LIVE POLLING ----------------
 
   useEffect(() => {
 
@@ -236,15 +236,11 @@ export default function StreamPage() {
 
     if (activeMatch) {
 
-      try {
+      await api.patch(`/api/matches/${activeMatch._id}`, {
 
-        await api.patch(`/api/matches/${activeMatch._id}`, {
+        is_streaming: true,
 
-          is_streaming: true,
-
-        });
-
-      } catch (e) {}
+      }).catch(() => {});
 
     }
 
@@ -302,13 +298,13 @@ export default function StreamPage() {
 
     const height = headerH + rowH * 2;
 
-    // BG
+    // background
 
     ctx.fillStyle = "rgba(0,0,0,0.75)";
 
     ctx.fillRect(x, y, width, height);
 
-    // GRID
+    // grid
 
     ctx.strokeStyle = "rgba(255,255,255,0.1)";
 
@@ -330,7 +326,7 @@ export default function StreamPage() {
 
     ctx.stroke();
 
-    // HEADER
+    // header
 
     ctx.fillStyle = "rgba(255,255,255,0.4)";
 
@@ -384,11 +380,7 @@ export default function StreamPage() {
 
         const isWinner = (val || 0) > (opp || 0);
 
-        ctx.fillStyle = isWinner
-
-          ? "#facc15"
-
-          : "rgba(255,255,255,0.7)";
+        ctx.fillStyle = isWinner ? "#facc15" : "rgba(255,255,255,0.7)";
 
         ctx.font = "bold 12px Arial";
 
@@ -428,6 +420,10 @@ export default function StreamPage() {
 
   function startRecording() {
 
+    if (!canvasRef.current) return;
+
+    chunksRef.current = [];
+
     const stream = canvasRef.current.captureStream(60);
 
     const mimeType = MediaRecorder.isTypeSupported("video/mp4")
@@ -439,8 +435,6 @@ export default function StreamPage() {
     const recorder = new MediaRecorder(stream, { mimeType });
 
     recorderRef.current = recorder;
-
-    chunksRef.current = [];
 
     recorder.ondataavailable = (e) => {
 
@@ -470,34 +464,6 @@ export default function StreamPage() {
 
   }
 
-  function stopAndDownload() {
-
-    stopRecording();
-
-    setTimeout(() => {
-
-      const blob = new Blob(chunksRef.current, {
-
-        type: "video/webm",
-
-      });
-
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-
-      a.href = url;
-
-      a.download = `match-${activeMatch?._id || Date.now()}.webm`;
-
-      a.click();
-
-      URL.revokeObjectURL(url);
-
-    }, 500);
-
-  }
-
   const mbRecorded = (recordingSize / 1024 / 1024).toFixed(1);
 
   // ---------------- UI ----------------
@@ -506,7 +472,9 @@ export default function StreamPage() {
 
     <div className="max-w-2xl px-4 py-6 mx-auto">
 
-      <div className="relative overflow-hidden bg-black rounded-2xl aspect-video">
+      <h1 className="mb-2 text-2xl font-bold">Enregistrement vidéo</h1>
+
+      <div className="relative mb-4 overflow-hidden bg-black rounded-2xl aspect-video">
 
         <video
 
@@ -522,29 +490,13 @@ export default function StreamPage() {
 
         />
 
-        <canvas
+        <canvas ref={canvasRef} className="w-full h-full object-cover" />
 
-          ref={canvasRef}
+        {!isStreaming && (
 
-          className="w-full h-full object-cover"
+          <div className="absolute inset-0 flex items-center justify-center text-white/40">
 
-        />
-
-        {isStreaming && activeMatch && (
-
-          <div className="absolute top-3 left-2 z-10 max-w-[55%]">
-
-            <ScoreBoard
-
-              score={activeMatch.score}
-
-              playerName={activeMatch.player_name}
-
-              opponentName={activeMatch.opponent_name}
-
-              compact
-
-            />
+            <Video className="w-12 h-12" />
 
           </div>
 
@@ -552,17 +504,11 @@ export default function StreamPage() {
 
       </div>
 
-      <div className="flex gap-3 mt-4">
+      <div className="flex gap-3">
 
         {!isStreaming ? (
 
-          <button
-
-            onClick={startCamera}
-
-            className="flex-1 h-12 bg-green-600 text-white rounded-xl"
-
-          >
+          <button onClick={startCamera} className="flex-1 h-12 bg-green-600 text-white rounded-xl">
 
             Démarrer
 
@@ -570,13 +516,7 @@ export default function StreamPage() {
 
         ) : (
 
-          <button
-
-            onClick={stopCamera}
-
-            className="flex-1 h-12 bg-red-600 text-white rounded-xl"
-
-          >
+          <button onClick={stopCamera} className="flex-1 h-12 bg-red-600 text-white rounded-xl">
 
             Stop
 
@@ -585,6 +525,32 @@ export default function StreamPage() {
         )}
 
       </div>
+
+      {isStreaming && (
+
+        <div className="mt-4">
+
+          {!isRecording ? (
+
+            <button onClick={startRecording} className="text-red-600">
+
+              Start REC
+
+            </button>
+
+          ) : (
+
+            <button onClick={stopRecording} className="text-red-600">
+
+              Stop REC ({mbRecorded} MB)
+
+            </button>
+
+          )}
+
+        </div>
+
+      )}
 
     </div>
 
