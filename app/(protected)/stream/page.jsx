@@ -15,6 +15,7 @@ import {
   Download,
   RefreshCw,
   Fullscreen,
+  Stop,
 } from "lucide-react";
 
 export default function StreamPage() {
@@ -317,14 +318,19 @@ export default function StreamPage() {
   // ---------------- SCOREBOARD ----------------
 
   function drawScoreboard(ctx, match) {
+    const scale = 1.5;
+
+    ctx.save();
+    ctx.scale(scale, scale);
+
     const score = match.score || {};
 
     const sP = score.sets_player || [];
     const sO = score.sets_opponent || [];
     const sets = Math.max(sP.length, sO.length);
 
-    const x = 20;
-    const y = 20;
+    const x = 20 / scale;
+    const y = 20 / scale;
 
     const colName = 90;
     const colSet = 20;
@@ -406,6 +412,8 @@ export default function StreamPage() {
       ctx.font = "bold 14px Arial";
       ctx.fillText(pts || "0", x + colName + sets * colSet + 6, yRow + 14);
     });
+
+    ctx.restore();
   }
 
   function formatName(n) {
@@ -543,13 +551,16 @@ export default function StreamPage() {
                 Start REC
               </button>
             ) : (
-              <button
-                onClick={stopRecording}
-                className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
-              >
-                <Download className="w-4 h-4" />
-                Stop & download ({mbRecorded} MB)
-              </button>
+              <div className="flex flex-col">
+                <button
+                  onClick={stopRecording}
+                  className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+                <p className="self-end">({mbRecorded} MB)</p>
+              </div>
             )}
           </div>
         )}
