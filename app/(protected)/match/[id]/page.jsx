@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "../../../../lib/api";
+import { computeStats } from "../../../../lib/stats";
 import ScoreBoard from "../../../../components/ScoreBoard";
 import { ArrowLeft, Trophy, Clock, MapPin, Trash2 } from "lucide-react";
 import { getScoreDisplay } from "../../../../lib/tennisScoring";
