@@ -34,43 +34,6 @@ export default function StreamPage() {
   const matchId = params.get("matchId");
   const pollingRef = useRef(null);
 
-  function goFullscreen() {
-    const el = canvasRef.current;
-    if (!el) return;
-
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    // 👉 Desktop → vrai fullscreen API
-    if (!isMobile && el.requestFullscreen) {
-      el.requestFullscreen();
-      return;
-    }
-
-    // 👉 Mobile fallback → fake fullscreen
-    enterFakeFullscreen();
-  }
-
-  function enterFakeFullscreen() {
-    const container = canvasRef.current.parentElement;
-
-    if (!container) return;
-
-    container.classList.add("!fixed", "!inset-0", "!z-50", "!bg-black");
-
-    // scroll lock (important mobile)
-    document.body.style.overflow = "hidden";
-  }
-
-  function exitFakeFullscreen() {
-    const container = canvasRef.current.parentElement;
-
-    if (!container) return;
-
-    container.classList.remove("!fixed", "!inset-0", "!z-50", "!bg-black");
-
-    document.body.style.overflow = "";
-  }
-
   useEffect(() => {
     const checkOrientation = () => {
       const isMobile = window.matchMedia("(max-width: 768px)").matches;
@@ -109,66 +72,126 @@ export default function StreamPage() {
       "requestVideoFrameCallback" in HTMLVideoElement.prototype
     );
 
-    const draw = () => {
+    // ✅ FPS adaptatif
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const FPS = isMobile ? 24 : 30;
+    const interval = 1000 / FPS;
+
+    let lastDraw = 0;
+
+    // ✅ cache crop
+    let crop = null;
+
+    function computeCrop() {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+
+      const canvasRatio = 16 / 9;
+      const videoRatio = vw / vh;
+
+      if (videoRatio > canvasRatio) {
+        const sh = vh;
+        const sw = vh * canvasRatio;
+        return {
+          sx: (vw - sw) / 2,
+          sy: 0,
+          sw,
+          sh,
+        };
+      } else {
+        const sw = vw;
+        const sh = vw / canvasRatio;
+        return {
+          sx: 0,
+          sy: (vh - sh) / 2,
+          sw,
+          sh,
+        };
+      }
+    }
+
+    // ✅ gradient cache
+    let gradient = null;
+    function initGradient() {
+      gradient = ctx.createLinearGradient(0, 0, 0, 720);
+      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.05)");
+    }
+
+    // ✅ overlay cache
+    const overlayCanvas = document.createElement("canvas");
+    const overlayCtx = overlayCanvas.getContext("2d");
+
+    function updateOverlay(match) {
+      overlayCanvas.width = 1280;
+      overlayCanvas.height = 720;
+
+      overlayCtx.clearRect(0, 0, 1280, 720);
+
+      if (match?.score) {
+        drawScoreboard(overlayCtx, match);
+      }
+    }
+
+    // 🔁 update overlay uniquement quand match change
+    updateOverlay(activeMatch);
+
+    function renderFrame() {
       if (!video || !canvas) return;
 
-      if (video.videoWidth === 0) {
-        loop();
-        return;
-      }
-
-      // 🔥 FORCER FORMAT PAYSAGE 16:9
+      // 🔒 taille fixe 16:9
       const targetWidth = 1280;
       const targetHeight = 720;
 
       if (canvas.width !== targetWidth) {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
+        initGradient();
       }
 
-      // 🎥 dimensions vidéo source
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-
-      // 🔥 calcul "cover" (comme object-fit: cover)
-      const videoRatio = vw / vh;
-      const canvasRatio = targetWidth / targetHeight;
-
-      let sx, sy, sw, sh;
-
-      if (videoRatio > canvasRatio) {
-        // vidéo trop large → crop horizontal
-        sh = vh;
-        sw = vh * canvasRatio;
-        sx = (vw - sw) / 2;
-        sy = 0;
-      } else {
-        // vidéo trop haute → crop vertical
-        sw = vw;
-        sh = vw / canvasRatio;
-        sx = 0;
-        sy = (vh - sh) / 2;
+      if (!crop && video.videoWidth > 0) {
+        crop = computeCrop();
       }
 
-      // 🎬 DRAW VIDEO (crop + scale)
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+      if (!crop) return;
 
-      // OVERLAY
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.05)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // 🎥 VIDEO
+      ctx.drawImage(
+        video,
+        crop.sx,
+        crop.sy,
+        crop.sw,
+        crop.sh,
+        0,
+        0,
+        targetWidth,
+        targetHeight,
+      );
 
-      // SCOREBOARD
-      if (activeMatch?.score) {
-        ctx.save();
-        const scale = canvas.width / canvas.height;
-        ctx.scale(scale, scale);
-        drawScoreboard(ctx, activeMatch);
-        ctx.restore();
+      // 🌈 gradient
+      if (gradient) {
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // 🎨 overlay (ultra léger)
+      ctx.drawImage(overlayCanvas, 0, 0);
+    }
+
+    const draw = (now) => {
+      if (document.hidden) {
+        loop();
+        return;
+      }
+
+      if (now - lastDraw < interval) {
+        loop();
+        return;
+      }
+
+      lastDraw = now;
+
+      renderFrame();
       loop();
     };
 
@@ -489,52 +512,48 @@ export default function StreamPage() {
       <div className="relative overflow-hidden bg-black aspect-video">
         <video ref={videoRef} autoPlay playsInline muted className="hidden" />
         <canvas ref={canvasRef} className="object-cover w-full h-full" />
-        <button onClick={goFullscreen}>
-          <Fullscreen
-            size={28}
-            className="absolute bottom-3 right-3 text-white/30"
-          />
-        </button>
       </div>
-      <div className="flex gap-3 mt-4">
-        {!isStreaming ? (
-          <button
-            onClick={startCamera}
-            className="flex-1 h-12 text-white bg-green-600 rounded-xl"
-          >
-            Démarrer
-          </button>
-        ) : (
-          <button
-            onClick={stopCamera}
-            className="flex-1 h-12 text-white bg-red-600 rounded-xl"
-          >
-            Stop
-          </button>
-        )}
-      </div>
-
-      {isStreaming && (
-        <div className="p-4 mt-4 border rounded-2xl">
-          {!isRecording ? (
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-3 m-4">
+          {!isStreaming ? (
             <button
-              onClick={startRecording}
-              className="flex items-center gap-2 px-5 text-red-600 border border-red-300 h-11 rounded-xl"
+              onClick={startCamera}
+              className="flex items-center justify-center w-full gap-2 px-5 text-white bg-green-800 h-11 rounded-xl"
             >
-              <Circle className="w-4 h-4" />
-              Start REC
+              Démarrer
             </button>
           ) : (
             <button
-              onClick={stopRecording}
-              className="flex items-center gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
+              onClick={stopCamera}
+              className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
             >
-              <Download className="w-4 h-4" />
-              Stop & download ({mbRecorded} MB)
+              Stop
             </button>
           )}
         </div>
-      )}
+
+        {isStreaming && (
+          <div className="flex gap-3 m-4">
+            {!isRecording ? (
+              <button
+                onClick={startRecording}
+                className="flex items-center justify-center w-full gap-2 px-5 text-red-600 border border-red-300 h-11 rounded-xl"
+              >
+                <Circle className="w-4 h-4" />
+                Start REC
+              </button>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
+              >
+                <Download className="w-4 h-4" />
+                Stop & download ({mbRecorded} MB)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
