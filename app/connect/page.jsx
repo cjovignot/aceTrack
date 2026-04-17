@@ -5,11 +5,15 @@ import { useEffect, useState } from "react";
 
 export default function ConnectPage() {
   const params = useSearchParams();
-  const router = useRouter(); // ✅
+  const router = useRouter();
 
   const token = params.get("token");
 
   const [matches, setMatches] = useState([]);
+
+  // ✅ modal state
+  const [showModal, setShowModal] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -41,12 +45,29 @@ export default function ConnectPage() {
       body: JSON.stringify({ token, match_id }),
     });
 
-    // ✅ UX propre (optionnel)
-    const ok = confirm("Montre connectée ! Aller au stream ?");
+    // 👉 au lieu de confirm()
+    setSelectedMatch(match_id);
+    setShowModal(true);
+  }
 
-    if (ok) {
-      router.push(`/stream?matchId=${match_id}`);
-    }
+  function isInPWA() {
+    return window.matchMedia("(display-mode: standalone)").matches;
+  }
+
+  function goToStream() {
+    router.push(`/stream?matchId=${selectedMatch}`);
+  }
+
+  function openInApp() {
+    const url = `/stream?matchId=${selectedMatch}`;
+
+    // tentative ouverture PWA
+    window.location.href = url;
+
+    // fallback navigateur
+    setTimeout(() => {
+      window.open(url, "_blank");
+    }, 500);
   }
 
   return (
@@ -81,6 +102,46 @@ export default function ConnectPage() {
               </div>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ✅ MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="w-full max-w-sm p-6 bg-white shadow-xl rounded-2xl">
+            <h3 className="mb-2 text-lg font-bold">
+              Montre connectée ✅
+            </h3>
+
+            <p className="mb-4 text-sm text-gray-500">
+              Où veux-tu continuer ?
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={goToStream}
+                className="w-full p-3 text-white bg-black rounded-xl"
+              >
+                Aller au stream
+              </button>
+
+              {!isInPWA() && (
+                <button
+                  onClick={openInApp}
+                  className="w-full p-3 border border-gray-300 rounded-xl"
+                >
+                  Ouvrir dans l’app
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-full p-2 text-sm text-gray-400"
+              >
+                Plus tard
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
