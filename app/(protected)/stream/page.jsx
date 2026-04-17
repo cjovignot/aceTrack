@@ -38,11 +38,37 @@ export default function StreamPage() {
     const el = canvasRef.current;
     if (!el) return;
 
-    if (el.requestFullscreen) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // 👉 Desktop → vrai fullscreen API
+    if (!isMobile && el.requestFullscreen) {
       el.requestFullscreen();
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
+      return;
     }
+
+    // 👉 Mobile fallback → fake fullscreen
+    enterFakeFullscreen();
+  }
+
+  function enterFakeFullscreen() {
+    const container = canvasRef.current.parentElement;
+
+    if (!container) return;
+
+    container.classList.add("!fixed", "!inset-0", "!z-50", "!bg-black");
+
+    // scroll lock (important mobile)
+    document.body.style.overflow = "hidden";
+  }
+
+  function exitFakeFullscreen() {
+    const container = canvasRef.current.parentElement;
+
+    if (!container) return;
+
+    container.classList.remove("!fixed", "!inset-0", "!z-50", "!bg-black");
+
+    document.body.style.overflow = "";
   }
 
   useEffect(() => {
@@ -214,10 +240,8 @@ export default function StreamPage() {
   // ---------------- CAMERA ----------------
 
   async function startCamera() {
-    if (screen.orientation && screen.orientation.lock) {
-      try {
-        await screen.orientation.lock("landscape");
-      } catch (e) {}
+    if (screen.orientation?.lock) {
+      screen.orientation.lock("landscape").catch(() => {});
     }
 
     const stream = await navigator.mediaDevices.getUserMedia({
