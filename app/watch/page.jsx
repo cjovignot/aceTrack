@@ -23,6 +23,8 @@ function getServeSide(score) {
 
 export default function WatchPage() {
   const searchParams = useSearchParams();
+  
+  const lastUpdateRef = useRef(0);
 
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
@@ -112,144 +114,175 @@ export default function WatchPage() {
   }
 
   function startMatchPolling(id) {
-    if (matchIntervalRef.current) return;
+  if (matchIntervalRef.current) return;
 
-    matchIntervalRef.current = setInterval(async () => {
-      if (isUpdatingRef.current) return; // 🔥 bloque vraiment
+  matchIntervalRef.current = setInterval(async () => {
+    if (isUpdatingRef.current) return;
 
-      const res = await fetch(`/api/matches/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-      });
+    const res = await fetch(`/api/matches/${id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+    });
 
-      if (!res.ok) return;
+    if (!res.ok) return;
 
-      const updated = await res.json();
+    const updated = await res.json();
 
-      setMatch((prev) => {
-        // 🔥 évite overwrite inutile
-        if (JSON.stringify(prev?.score) === JSON.stringify(updated.score)) {
-          return prev;
-        }
-        return updated;
-      });
-    }, 1500);
-  }
+    // 🔥 protège contre les vieux états
+    const serverTime = new Date(updated.updatedAt || 0).getTime();
+
+    if (serverTime < lastUpdateRef.current) {
+      return; // ignore réponse obsolète
+    }
+
+    setMatch(updated);
+  }, 1500);
+}
 
   // ---------- SCORE ----------
   async function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
-    if (!match) return;
+  if (!match) return;
 
-    isUpdatingRef.current = true; // 🔥 bloque polling
+  isUpdatingRef.current = true;
 
-    setServiceFaults(0);
+  setServiceFaults(0);
 
-    const previousScore = JSON.parse(JSON.stringify(match.score));
+  const previousScore = JSON.parse(JSON.stringify(match.score));
 
-    const result = addPoint(match.score, winner);
+  const result = addPoint(match.score, winner);
 
-    const updated = {
-      ...match,
-      score: result.score,
-      ...(result.matchWon
-        ? { status: "Terminé", winner: result.matchWinner }
-        : {}),
-    };
+  const optimisticUpdate = {
+    ...match,
+    score: result.score,
+    updatedAt: new Date().toISOString(), // 🔥 important
+    ...(result.matchWon
+      ? { status: "Terminé", winner: result.matchWinner }
+      : {}),
+  };
 
-    setMatch(updated);
+  // 🔥 optimistic UI
+  lastUpdateRef.current = Date.now();
+  setMatch(optimisticUpdate);
 
-    await fetch(`/api/matches/${match._id}`, {
-      method: "PATCH", // ✅ FIX
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify(updated),
-    });
+  // 🔥 PATCH serveur
+  await fetch(`/api/matches/${match._id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+    body: JSON.stringify(optimisticUpdate),
+  });
 
-    await fetch("/api/points", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify({
-        match_id: match._id,
-        point_winner: winner,
-        timestamp: new Date(),
-        score_at_point: JSON.stringify(previousScore), // 🔥 clé undo
-      }),
-    });
+  // 🔥 log point
+  await fetch("/api/points", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+    body: JSON.stringify({
+      match_id: match._id,
+      point_winner: winner,
+      timestamp: new Date(),
+      score_at_point: JSON.stringify(previousScore),
+    }),
+  });
 
-    setLastPoint(winner);
-    setTimeout(() => setLastPoint(null), 150);
+  // 🔥 REFETCH propre (vérité backend)
+  const res = await fetch(`/api/matches/${match._id}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+  });
 
-    setTimeout(() => {
-      isUpdatingRef.current = false; // 🔥 libère polling après DB
-    }, 800);
+  if (res.ok) {
+    const fresh = await res.json();
+    lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
+    setMatch(fresh);
   }
+
+  setLastPoint(winner);
+  setTimeout(() => setLastPoint(null), 150);
+
+  isUpdatingRef.current = false;
+}
 
   // ---------- UNDO ----------
   async function handleUndo() {
-    if (!match) return;
+  if (!match) return;
 
-    isUpdatingRef.current = true;
+  isUpdatingRef.current = true;
 
-    const res = await fetch(`/api/points?match_id=${match._id}`, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-    });
+  const res = await fetch(`/api/points?match_id=${match._id}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+  });
 
-    const points = await res.json();
-    if (!points.length) {
-      isUpdatingRef.current = false;
-      return;
-    }
-
-    const lastPoint = points[0];
-
-    if (!lastPoint.score_at_point) {
-      isUpdatingRef.current = false;
-      return;
-    }
-
-    const previousScore = JSON.parse(lastPoint.score_at_point);
-
-    const restored = {
-      ...match,
-      score: previousScore,
-      status: "En cours",
-      winner: null,
-    };
-
-    setMatch(restored);
-
-    await fetch(`/api/matches/${match._id}`, {
-      method: "PATCH", // ✅ FIX
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify(restored),
-    });
-
-    await fetch(`/api/points/${lastPoint._id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-    });
-
-    // 🔥 IMPORTANT : laisse le polling reprendre proprement
-    setTimeout(() => {
-      isUpdatingRef.current = false;
-    }, 800);
+  const points = await res.json();
+  if (!points.length) {
+    isUpdatingRef.current = false;
+    return;
   }
+
+  const lastPoint = points[0];
+
+  if (!lastPoint.score_at_point) {
+    isUpdatingRef.current = false;
+    return;
+  }
+
+  const previousScore = JSON.parse(lastPoint.score_at_point);
+
+  const optimistic = {
+    ...match,
+    score: previousScore,
+    status: "En cours",
+    winner: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  lastUpdateRef.current = Date.now();
+  setMatch(optimistic);
+
+  await fetch(`/api/matches/${match._id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+    body: JSON.stringify(optimistic),
+  });
+
+  await fetch(`/api/points/${lastPoint._id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+  });
+
+  // 🔥 refetch réel
+  const freshRes = await fetch(`/api/matches/${match._id}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+  });
+
+  if (freshRes.ok) {
+    const fresh = await freshRes.json();
+    lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
+    setMatch(fresh);
+  }
+
+  isUpdatingRef.current = false;
+}
 
   function handleServiceFault() {
     if (serviceFaults === 0) {
