@@ -190,7 +190,6 @@ export default function WatchPage() {
   isWinner: isWinner,      // 🔥 AJOUT
   timestamp: new Date(),
   score_at_point: JSON.stringify(previousScore),
-}),
     }),
   });
 
