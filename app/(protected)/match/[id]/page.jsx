@@ -126,7 +126,7 @@ const winRate =
           </span>
         )}
       </div>
-      {totalPoints > 0 && (
+      {stats.total > 0 && (
         <div className="mt-8 space-y-4">
           <h2 className="text-lg font-bold">Statistiques</h2>
           <div className="grid grid-cols-2 gap-3">
