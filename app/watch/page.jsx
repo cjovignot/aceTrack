@@ -184,10 +184,13 @@ export default function WatchPage() {
       "x-pairing-token": pairingToken,
     },
     body: JSON.stringify({
-      match_id: match._id,
-      point_winner: winner,
-      timestamp: new Date(),
-      score_at_point: JSON.stringify(previousScore),
+  match_id: match._id,
+  point_winner: winner,
+  shot_type: shotType,     // 🔥 AJOUT
+  isWinner: isWinner,      // 🔥 AJOUT
+  timestamp: new Date(),
+  score_at_point: JSON.stringify(previousScore),
+}),
     }),
   });
 
@@ -289,7 +292,7 @@ export default function WatchPage() {
       setServiceFaults(1);
     } else {
       const receiver = match.score.serving === "player" ? "opponent" : "player";
-      scorePoint(receiver);
+scorePoint(receiver, "Double faute", false);
     }
   }
 
@@ -391,7 +394,7 @@ export default function WatchPage() {
 
       {/* Zone 1 */}
       <button
-        onClick={() => scorePoint("player", "Faute directe", false)}
+onClick={() => scorePoint("opponent", "Faute directe", false)}
         style={{
           ...cellBtn("#4a1515"),
           transform: lastPoint === "player" ? "scale(0.93)" : "scale(1)",
@@ -402,7 +405,7 @@ export default function WatchPage() {
 
       {/* Zone 2 */}
       <button
-        onClick={() => scorePoint("opponent", "Coup droit", true)}
+onClick={() => scorePoint("opponent", "Coup droit", true)}
         style={{
           ...cellBtn("#1e3a5f"),
           transform: lastPoint === "opponent" ? "scale(0.93)" : "scale(1)",
@@ -483,18 +486,18 @@ export default function WatchPage() {
 
       {/* Ace */}
       <button
-        onClick={() => scorePoint(serving, "Service gagnant", true)}
+onClick={() => scorePoint(serving, "Ace", true)}
         style={cellBtn("#1a1a2e")}
       >
         Ace
       </button>
 
       {/* Bottom row */}
-      <button onClick={() => scorePoint("opponent")} style={cellBtn("#4a1515")}>
+      <button onClick={() => scorePoint("player", "Faute directe", false)} style={cellBtn("#4a1515")}>
         Faute
       </button>
 
-      <button onClick={() => scorePoint("player")} style={cellBtn("#14532d")}>
+      <button onClick={() => scorePoint("player", "Coup droit", true)} style={cellBtn("#14532d")}>
         Gagnant
       </button>
 
