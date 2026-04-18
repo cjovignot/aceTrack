@@ -393,7 +393,7 @@ scorePoint(receiver, "Double faute", false);
 
       {/* Zone 1 */}
       <button
-onClick={() => scorePoint("opponent", "Faute directe", false)}
+onClick={() => scorePoint("player", "Faute directe", false)}
         style={{
           ...cellBtn("#4a1515"),
           transform: lastPoint === "player" ? "scale(0.93)" : "scale(1)",
@@ -492,7 +492,7 @@ onClick={() => scorePoint(serving, "Ace", true)}
       </button>
 
       {/* Bottom row */}
-      <button onClick={() => scorePoint("player", "Faute directe", false)} style={cellBtn("#4a1515")}>
+      <button onClick={() => scorePoint("opponent", "Faute directe", false)} style={cellBtn("#4a1515")}>
         Faute
       </button>
 
