@@ -27,7 +27,7 @@ export default function ProtectedLayout({ children }) {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const hideNavOnStreamMobile = pathname === "/stream" && isMobile;
+  const hideNavOnStreamMobile = pathname === "/test" && isMobile;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
