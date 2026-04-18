@@ -23,7 +23,7 @@ function getServeSide(score) {
 
 export default function WatchPage() {
   const searchParams = useSearchParams();
-  
+
   const lastUpdateRef = useRef(0);
 
   const [match, setMatch] = useState(null);
@@ -114,184 +114,185 @@ export default function WatchPage() {
   }
 
   function startMatchPolling(id) {
-  if (matchIntervalRef.current) return;
+    if (matchIntervalRef.current) return;
 
-  matchIntervalRef.current = setInterval(async () => {
-    if (isUpdatingRef.current) return;
+    matchIntervalRef.current = setInterval(async () => {
+      if (isUpdatingRef.current) return;
 
-    const res = await fetch(`/api/matches/${id}`, {
+      const res = await fetch(`/api/matches/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+      });
+
+      if (!res.ok) return;
+
+      const updated = await res.json();
+
+      // 🔥 protège contre les vieux états
+      const serverTime = new Date(updated.updatedAt || 0).getTime();
+
+      if (serverTime < lastUpdateRef.current) {
+        return; // ignore réponse obsolète
+      }
+
+      setMatch(updated);
+    }, 1500);
+  }
+
+  // ---------- SCORE ----------
+  async function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
+    if (!match) return;
+
+    isUpdatingRef.current = true;
+
+    setServiceFaults(0);
+
+    const previousScore = JSON.parse(JSON.stringify(match.score));
+
+    const result = addPoint(match.score, winner);
+
+    const optimisticUpdate = {
+      ...match,
+      score: result.score,
+      updatedAt: new Date().toISOString(), // 🔥 important
+      ...(result.matchWon
+        ? { status: "Terminé", winner: result.matchWinner }
+        : {}),
+    };
+
+    // 🔥 optimistic UI
+    lastUpdateRef.current = Date.now();
+    setMatch(optimisticUpdate);
+
+    // 🔥 PATCH serveur
+    await fetch(`/api/matches/${match._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(optimisticUpdate),
+    });
+
+    // 🔥 log point
+    await fetch("/api/points", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify({
+        pairingToken: pairingToken,
+        match_id: match._id,
+        point_winner: winner,
+        shot_type: shotType, // 🔥 AJOUT
+        isWinner: isWinner, // 🔥 AJOUT
+        timestamp: new Date(),
+        score_at_point: JSON.stringify(previousScore),
+      }),
+    });
+
+    // 🔥 REFETCH propre (vérité backend)
+    const res = await fetch(`/api/matches/${match._id}`, {
       headers: {
         "Content-Type": "application/json",
         "x-pairing-token": pairingToken,
       },
     });
 
-    if (!res.ok) return;
-
-    const updated = await res.json();
-
-    // 🔥 protège contre les vieux états
-    const serverTime = new Date(updated.updatedAt || 0).getTime();
-
-    if (serverTime < lastUpdateRef.current) {
-      return; // ignore réponse obsolète
+    if (res.ok) {
+      const fresh = await res.json();
+      lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
+      setMatch(fresh);
     }
 
-    setMatch(updated);
-  }, 1500);
-}
+    setLastPoint(winner);
+    setTimeout(() => setLastPoint(null), 150);
 
-  // ---------- SCORE ----------
-  async function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
-  if (!match) return;
-
-  isUpdatingRef.current = true;
-
-  setServiceFaults(0);
-
-  const previousScore = JSON.parse(JSON.stringify(match.score));
-
-  const result = addPoint(match.score, winner);
-
-  const optimisticUpdate = {
-    ...match,
-    score: result.score,
-    updatedAt: new Date().toISOString(), // 🔥 important
-    ...(result.matchWon
-      ? { status: "Terminé", winner: result.matchWinner }
-      : {}),
-  };
-
-  // 🔥 optimistic UI
-  lastUpdateRef.current = Date.now();
-  setMatch(optimisticUpdate);
-
-  // 🔥 PATCH serveur
-  await fetch(`/api/matches/${match._id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-    body: JSON.stringify(optimisticUpdate),
-  });
-
-  // 🔥 log point
-  await fetch("/api/points", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-    body: JSON.stringify({
-  match_id: match._id,
-  point_winner: winner,
-  shot_type: shotType,     // 🔥 AJOUT
-  isWinner: isWinner,      // 🔥 AJOUT
-  timestamp: new Date(),
-  score_at_point: JSON.stringify(previousScore),
-    }),
-  });
-
-  // 🔥 REFETCH propre (vérité backend)
-  const res = await fetch(`/api/matches/${match._id}`, {
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-  });
-
-  if (res.ok) {
-    const fresh = await res.json();
-    lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
-    setMatch(fresh);
+    isUpdatingRef.current = false;
   }
-
-  setLastPoint(winner);
-  setTimeout(() => setLastPoint(null), 150);
-
-  isUpdatingRef.current = false;
-}
 
   // ---------- UNDO ----------
   async function handleUndo() {
-  if (!match) return;
+    if (!match) return;
 
-  isUpdatingRef.current = true;
+    isUpdatingRef.current = true;
 
-  const res = await fetch(`/api/points?match_id=${match._id}`, {
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-  });
+    const res = await fetch(`/api/points?match_id=${match._id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+    });
 
-  const points = await res.json();
-  if (!points.length) {
+    const points = await res.json();
+    if (!points.length) {
+      isUpdatingRef.current = false;
+      return;
+    }
+
+    const lastPoint = points[0];
+
+    if (!lastPoint.score_at_point) {
+      isUpdatingRef.current = false;
+      return;
+    }
+
+    const previousScore = JSON.parse(lastPoint.score_at_point);
+
+    const optimistic = {
+      ...match,
+      score: previousScore,
+      status: "En cours",
+      winner: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    lastUpdateRef.current = Date.now();
+    setMatch(optimistic);
+
+    await fetch(`/api/matches/${match._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(optimistic),
+    });
+
+    await fetch(`/api/points/${lastPoint._id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+    });
+
+    // 🔥 refetch réel
+    const freshRes = await fetch(`/api/matches/${match._id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+    });
+
+    if (freshRes.ok) {
+      const fresh = await freshRes.json();
+      lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
+      setMatch(fresh);
+    }
+
     isUpdatingRef.current = false;
-    return;
   }
-
-  const lastPoint = points[0];
-
-  if (!lastPoint.score_at_point) {
-    isUpdatingRef.current = false;
-    return;
-  }
-
-  const previousScore = JSON.parse(lastPoint.score_at_point);
-
-  const optimistic = {
-    ...match,
-    score: previousScore,
-    status: "En cours",
-    winner: null,
-    updatedAt: new Date().toISOString(),
-  };
-
-  lastUpdateRef.current = Date.now();
-  setMatch(optimistic);
-
-  await fetch(`/api/matches/${match._id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-    body: JSON.stringify(optimistic),
-  });
-
-  await fetch(`/api/points/${lastPoint._id}`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-  });
-
-  // 🔥 refetch réel
-  const freshRes = await fetch(`/api/matches/${match._id}`, {
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-  });
-
-  if (freshRes.ok) {
-    const fresh = await freshRes.json();
-    lastUpdateRef.current = new Date(fresh.updatedAt || 0).getTime();
-    setMatch(fresh);
-  }
-
-  isUpdatingRef.current = false;
-}
 
   function handleServiceFault() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
       const receiver = match.score.serving === "player" ? "opponent" : "player";
-scorePoint(receiver, "Double faute", false);
+      scorePoint(receiver, "Double faute", false);
     }
   }
 
@@ -393,7 +394,7 @@ scorePoint(receiver, "Double faute", false);
 
       {/* Zone 1 */}
       <button
-onClick={() => scorePoint("player", "Faute directe", false)}
+        onClick={() => scorePoint("player", "Faute directe", false)}
         style={{
           ...cellBtn("#4a1515"),
           transform: lastPoint === "player" ? "scale(0.93)" : "scale(1)",
@@ -404,7 +405,7 @@ onClick={() => scorePoint("player", "Faute directe", false)}
 
       {/* Zone 2 */}
       <button
-onClick={() => scorePoint("opponent", "Coup droit", true)}
+        onClick={() => scorePoint("opponent", "Coup droit", true)}
         style={{
           ...cellBtn("#1e3a5f"),
           transform: lastPoint === "opponent" ? "scale(0.93)" : "scale(1)",
@@ -485,18 +486,24 @@ onClick={() => scorePoint("opponent", "Coup droit", true)}
 
       {/* Ace */}
       <button
-onClick={() => scorePoint(serving, "Ace", true)}
+        onClick={() => scorePoint(serving, "Ace", true)}
         style={cellBtn("#1a1a2e")}
       >
         Ace
       </button>
 
       {/* Bottom row */}
-      <button onClick={() => scorePoint("opponent", "Faute directe", false)} style={cellBtn("#4a1515")}>
+      <button
+        onClick={() => scorePoint("opponent", "Faute directe", false)}
+        style={cellBtn("#4a1515")}
+      >
         Faute
       </button>
 
-      <button onClick={() => scorePoint("player", "Coup droit", true)} style={cellBtn("#14532d")}>
+      <button
+        onClick={() => scorePoint("player", "Coup droit", true)}
+        style={cellBtn("#14532d")}
+      >
         Gagnant
       </button>
 

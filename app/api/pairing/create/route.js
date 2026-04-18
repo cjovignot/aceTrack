@@ -14,8 +14,12 @@ export async function POST() {
     created_at: Date.now(),
   };
 
-  // 🔥 TTL 10 minutes
-  await redis.set(`pairing:${token}`, pairing, { ex: 600 });
+  // 🔥 IMPORTANT : Redis stocke du string
+  await redis.set(
+    `pairing:${token}`,
+    JSON.stringify(pairing),
+    { ex: 600 }, // TTL 10 min
+  );
 
   return Response.json({ token });
 }

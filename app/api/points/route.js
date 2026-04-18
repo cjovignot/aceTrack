@@ -4,37 +4,45 @@ import { getUser } from "@/lib/auth";
 import PointLog from "@/models/PointLog";
 import Match from "@/models/Match";
 import Pairing from "@/models/Pairing";
+import { redis } from "@/lib/redis";
 
 // ---------- AUTH HELPER ----------
-async function getAuthorizedMatch(request, match_id) {
+export async function getAuthorizedMatch(request, match_id) {
   await connectDB();
 
-  // 1) USER CONNECTÉ
+  const token = request.headers.get("x-pairing-token");
+
+  console.log(11111, token);
+
+  // 🔥 1. PRIORITY: DEVICE / WATCH (Redis)
+  if (token) {
+    const pairingRaw = await redis.get(`pairing:${token}`);
+
+    const pairing =
+      typeof pairingRaw === "string" ? JSON.parse(pairingRaw) : pairingRaw;
+
+    if (
+      pairing.connected &&
+      pairing.match_id &&
+      pairing.match_id.toString() === match_id
+    ) {
+      return await Match.findById(match_id);
+    }
+
+    return null;
+  }
+
+  // 🔥 2. FALLBACK: USER AUTH
   const user = getUser(request);
 
   if (user) {
-    const match = await Match.findOne({
+    return await Match.findOne({
       _id: match_id,
       userId: user.id,
     });
-
-    if (match) return match;
   }
 
-  // 2) WATCH / DEVICE VIA PAIRING TOKEN
-  const token = request.headers.get("x-pairing-token");
-
-  if (!token) return null;
-
-  const pairing = await Pairing.findOne({ token });
-
-  if (!pairing) return null;
-
-  if (!pairing.match_id) return null;
-
-  if (pairing.match_id.toString() !== match_id) return null;
-
-  return await Match.findById(match_id);
+  return null;
 }
 
 // ---------- GET POINTS ----------
@@ -68,8 +76,16 @@ export async function GET(request) {
 export async function POST(request) {
   await connectDB();
 
-  const body = await request.json();
-  const { match_id } = body;
+  let body;
+
+  try {
+    body = await request.json();
+    console.log(body);
+  } catch (e) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const match_id = body?.match_id;
 
   if (!match_id) {
     return NextResponse.json({ error: "match_id required" }, { status: 400 });

@@ -65,13 +65,13 @@ export async function GET(request, context) {
   // console.log("Match found:", !!match);
   // console.log("Match userId:", match?.userId);
 
-  if (match) {
-    console.log("Match full:", {
-      id: match._id,
-      userId: match.userId,
-      status: match.status,
-    });
-  }
+  // if (match) {
+  //   console.log("Match full:", {
+  //     id: match._id,
+  //     userId: match.userId,
+  //     status: match.status,
+  //   });
+  // }
 
   // ---------- AUTH RESULT ----------
   const authorizedMatch = await getAuthorizedMatch(request, id);

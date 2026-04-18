@@ -6,16 +6,18 @@ import Match from "@/models/Match";
 import Pairing from "@/models/Pairing";
 
 // ---------- DELETE ONE POINT ----------
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
   await connectDB();
 
+  const { params } = context;
   const pointId = params.id;
+
+  console.log(params);
 
   if (!pointId) {
     return NextResponse.json({ error: "Point id required" }, { status: 400 });
   }
 
-  // 1. récupérer le point
   const point = await PointLog.findById(pointId);
 
   if (!point) {
@@ -26,7 +28,6 @@ export async function DELETE(request, { params }) {
 
   let authorized = false;
 
-  // ---------- CAS 1 : USER CONNECTÉ ----------
   const user = getUser(request);
 
   if (user) {
@@ -38,7 +39,6 @@ export async function DELETE(request, { params }) {
     if (match) authorized = true;
   }
 
-  // ---------- CAS 2 : WATCH / PAIRING TOKEN ----------
   if (!authorized) {
     const token = request.headers.get("x-pairing-token");
 
@@ -55,12 +55,10 @@ export async function DELETE(request, { params }) {
     }
   }
 
-  // ---------- REFUS FINAL ----------
   if (!authorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // ---------- DELETE ----------
   await PointLog.findByIdAndDelete(pointId);
 
   return NextResponse.json({
