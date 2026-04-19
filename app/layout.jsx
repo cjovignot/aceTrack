@@ -6,7 +6,6 @@ export const metadata = {
   description: "Score en direct",
 
   manifest: "/manifest.json",
-  themeColor: "#000000",
 
   appleWebApp: {
     capable: true,
@@ -17,6 +16,10 @@ export const metadata = {
   icons: {
     apple: "/icons/icon-512.png",
   },
+};
+
+export const viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }) {

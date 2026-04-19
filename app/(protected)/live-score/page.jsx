@@ -10,6 +10,7 @@ export default function LiveScorePage() {
   const router = useRouter();
   const params = useSearchParams();
   const matchId = params.get("matchId");
+  const [loading, setLoading] = useState(true);
   const [match, setMatch] = useState(null);
   const [pointHistory, setPointHistory] = useState([]);
   const [scoreHistory, setScoreHistory] = useState([]);
@@ -22,10 +23,18 @@ export default function LiveScorePage() {
       : api
           .get("/api/matches?status=En%20cours&limit=1")
           .then((r) => ({ data: r.data[0] }));
+
     load.then((r) => {
-      if (r.data) setMatch(r.data);
+      if (r.data) {
+        setMatch(r.data);
+      } else {
+        setMatch(null);
+      }
+      setLoading(false);
     });
+
     timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+
     return () => clearInterval(timer.current);
   }, [matchId]);
 
@@ -106,13 +115,30 @@ export default function LiveScorePage() {
   }
 
   const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
-  if (!match) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen text-gray-400">
         Chargement du match...
       </div>
     );
   }
+
+  if (!match) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+        <p className="mb-4 text-gray-400">
+          Créer un match pour saisir les points depuis votre appareil
+        </p>
+        <button
+          onClick={() => router.push("/new-match")}
+          className="px-6 py-3 font-semibold text-white transition bg-green-600 rounded-xl hover:bg-green-700"
+        >
+          Créer un match
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-lg px-4 py-6 mx-auto">
       <div className="flex items-center justify-between mb-6">
