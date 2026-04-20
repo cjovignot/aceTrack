@@ -52,7 +52,7 @@ export default function MatchDetailPage() {
     stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;
 
   return (
-    <div className="max-w-lg px-4 py-6 mx-auto">
+    <div className="max-w-lg mb-20 px-4 py-6 mx-auto">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => router.push("/dashboard")}
