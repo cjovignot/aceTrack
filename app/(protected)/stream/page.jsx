@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 
 export default function StreamPage() {
+  const containerRef = useRef(null);
+  const [canvasHeight, setCanvasHeight] = useState(0);
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -34,6 +36,48 @@ export default function StreamPage() {
   const params = useSearchParams();
   const matchId = params.get("matchId");
   const pollingRef = useRef(null);
+
+  useEffect(() => {
+    function updateSize() {
+      const viewportHeight = window.innerHeight;
+
+      // hauteur des boutons (approx ou mesurée)
+      const controlsHeight = 10;
+
+      // safe area iOS
+      const safeArea =
+        parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue(
+            "env(safe-area-inset-bottom)",
+          ),
+        ) || 0;
+
+      const available = viewportHeight - controlsHeight - safeArea;
+
+      setCanvasHeight(available);
+    }
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    const handleLoaded = () => {
+      console.log("VIDEO READY", video.videoWidth, video.videoHeight);
+    };
+
+    video.addEventListener("loadedmetadata", handleLoaded);
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoaded);
+    };
+  }, []);
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -63,63 +107,21 @@ export default function StreamPage() {
   // ---------------- CANVAS ----------------
 
   useEffect(() => {
-    if (!isStreaming) return;
+    if (!isStreaming || !videoRef.current) return;
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const ctx = canvas.getContext("2d");
 
-    const isSafari = !(
-      "requestVideoFrameCallback" in HTMLVideoElement.prototype
-    );
+    let animationId;
 
-    // ✅ FPS adaptatif
-    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-    const FPS = isMobile ? 24 : 30;
+    const FPS = 30;
     const interval = 1000 / FPS;
-
     let lastDraw = 0;
 
-    // ✅ cache crop
     let crop = null;
 
-    function computeCrop() {
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-
-      const canvasRatio = 16 / 9;
-      const videoRatio = vw / vh;
-
-      if (videoRatio > canvasRatio) {
-        const sh = vh;
-        const sw = vh * canvasRatio;
-        return {
-          sx: (vw - sw) / 2,
-          sy: 0,
-          sw,
-          sh,
-        };
-      } else {
-        const sw = vw;
-        const sh = vw / canvasRatio;
-        return {
-          sx: 0,
-          sy: (vh - sh) / 2,
-          sw,
-          sh,
-        };
-      }
-    }
-
-    // ✅ gradient cache
-    let gradient = null;
-    function initGradient() {
-      gradient = ctx.createLinearGradient(0, 0, 0, 720);
-      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.05)");
-    }
-
-    // ✅ overlay cache
+    // 🎨 overlay cache
     const overlayCanvas = document.createElement("canvas");
     const overlayCtx = overlayCanvas.getContext("2d");
 
@@ -134,13 +136,38 @@ export default function StreamPage() {
       }
     }
 
-    // 🔁 update overlay uniquement quand match change
+    // 🔁 update au changement de match
     updateOverlay(activeMatch);
 
-    function renderFrame() {
-      if (!video || !canvas) return;
+    function computeCrop() {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
 
-      // 🔒 taille fixe 16:9
+      const canvasRatio = 16 / 9;
+      const videoRatio = vw / vh;
+
+      if (videoRatio > canvasRatio) {
+        const sh = vh;
+        const sw = vh * canvasRatio;
+        return { sx: (vw - sw) / 2, sy: 0, sw, sh };
+      } else {
+        const sw = vw;
+        const sh = vw / canvasRatio;
+        return { sx: 0, sy: (vh - sh) / 2, sw, sh };
+      }
+    }
+
+    // 🌈 gradient cache
+    let gradient = null;
+    function initGradient() {
+      gradient = ctx.createLinearGradient(0, 0, 0, 720);
+      gradient.addColorStop(0, "rgba(0,0,0,0.12)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.05)");
+    }
+
+    function renderFrame() {
+      if (video.videoWidth === 0) return;
+
       const targetWidth = 1280;
       const targetHeight = 720;
 
@@ -150,11 +177,9 @@ export default function StreamPage() {
         initGradient();
       }
 
-      if (!crop && video.videoWidth > 0) {
+      if (!crop) {
         crop = computeCrop();
       }
-
-      if (!crop) return;
 
       // 🎥 VIDEO
       ctx.drawImage(
@@ -175,16 +200,15 @@ export default function StreamPage() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // 🎨 overlay (ultra léger)
+      // 🎨 overlay (score)
       ctx.drawImage(overlayCanvas, 0, 0);
     }
 
-    const draw = (now) => {
-      if (document.hidden) {
-        loop();
-        return;
-      }
+    const useRAF =
+      !video.requestVideoFrameCallback ||
+      typeof video.requestVideoFrameCallback !== "function";
 
+    function draw(now) {
       if (now - lastDraw < interval) {
         loop();
         return;
@@ -194,19 +218,28 @@ export default function StreamPage() {
 
       renderFrame();
       loop();
-    };
+    }
 
-    const loop = () => {
-      if (isSafari) {
-        requestAnimationFrame(draw);
+    function loop() {
+      if (useRAF) {
+        animationId = requestAnimationFrame(draw);
       } else {
         video.requestVideoFrameCallback(draw);
       }
+    }
+
+    // 🔥 attendre vidéo prête
+    if (video.readyState < 2) {
+      video.onloadeddata = () => {
+        loop();
+      };
+    } else {
+      loop();
+    }
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
     };
-
-    loop();
-
-    return () => {};
   }, [isStreaming, activeMatch]);
 
   // ---------------- LOAD MATCHES ----------------
@@ -284,6 +317,7 @@ export default function StreamPage() {
 
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
+      await videoRef.current.play();
     }
 
     setIsStreaming(true);
@@ -436,7 +470,7 @@ export default function StreamPage() {
     chunksRef.current = [];
     setRecordingSize(0);
 
-    const fps = 30;
+    const fps = 60;
 
     // 🎥 VIDEO (canvas)
     const canvasStream = canvasRef.current.captureStream(fps);
@@ -516,54 +550,106 @@ export default function StreamPage() {
   // ---------------- UI ----------------
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="relative overflow-hidden bg-black aspect-video">
-        <video ref={videoRef} autoPlay playsInline muted className="hidden" />
-        <canvas ref={canvasRef} className="object-cover w-full h-full" />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex gap-3 m-4">
+    <div className="w-full h-full text-white bg-black">
+      <div className="flex flex-col h-screen md:flex-row">
+        {/* 🎥 VIDEO */}
+        <div
+          ref={containerRef}
+          className="relative bg-black"
+          style={{
+            height: isPortraitMobile ? canvasHeight : "100%",
+          }}
+        >
+          {" "}
+          <video ref={videoRef} autoPlay playsInline muted className="hidden" />
+          <canvas
+            ref={canvasRef}
+            className="object-contain w-full h-full bg-black"
+          />
+          {/* 🎛️ OVERLAY CONTROLS (mobile style) */}
+          <div className="absolute left-0 right-0 flex justify-center gap-3 bottom-4 md:hidden">
+            {!isStreaming ? (
+              <button
+                onClick={startCamera}
+                className="flex items-center justify-center h-10 px-5 py-4 bg-green-600 rounded-full shadow-lg text-md"
+              >
+                Démarrer
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={stopCamera}
+                  className="flex items-center justify-center h-10 px-5 py-4 bg-red-600 rounded-full shadow-lg text-md"
+                >
+                  Stop
+                </button>
+
+                {!isRecording ? (
+                  <button
+                    onClick={startRecording}
+                    className="flex items-center justify-center h-10 px-5 py-4 text-red-600 bg-white rounded-full shadow-lg text-md"
+                  >
+                    ● REC
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopRecording}
+                    className="px-6 py-3 bg-red-600 rounded-full shadow-lg"
+                  >
+                    Stop REC
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 🖥️ DESKTOP PANEL */}
+        <div className="flex-col hidden gap-4 p-4 border-l md:flex w-80 bg-zinc-900 border-zinc-800">
+          <h2 className="text-lg font-semibold">Contrôles</h2>
+
           {!isStreaming ? (
             <button
               onClick={startCamera}
-              className="flex items-center justify-center w-full gap-2 px-5 text-white bg-green-800 h-11 rounded-xl"
+              className="w-full h-12 bg-green-700 rounded-xl"
             >
-              Démarrer
+              ▶ Démarrer
             </button>
           ) : (
             <button
               onClick={stopCamera}
-              className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
+              className="w-full h-12 bg-red-600 rounded-xl"
             >
-              Stop
+              ■ Stop
             </button>
           )}
-        </div>
 
-        {isStreaming && (
-          <div className="flex gap-3 m-4">
-            {!isRecording ? (
-              <button
-                onClick={startRecording}
-                className="flex items-center justify-center w-full gap-2 px-5 text-red-600 border border-red-300 h-11 rounded-xl"
-              >
-                <Circle className="w-4 h-4" />
-                Start REC
-              </button>
-            ) : (
-              <div className="flex flex-col">
+          {isStreaming && (
+            <>
+              {!isRecording ? (
+                <button
+                  onClick={startRecording}
+                  className="w-full h-12 text-red-400 border border-red-400 rounded-xl"
+                >
+                  ● Start Recording
+                </button>
+              ) : (
                 <button
                   onClick={stopRecording}
-                  className="flex items-center justify-center w-full gap-2 px-5 text-white bg-red-600 h-11 rounded-xl"
+                  className="w-full h-12 bg-red-600 rounded-xl"
                 >
-                  <Download className="w-4 h-4" />
-                  Download
+                  ⬇ Download ({mbRecorded} MB)
                 </button>
-                <p className="self-end">({mbRecorded} MB)</p>
-              </div>
-            )}
+              )}
+            </>
+          )}
+
+          {/* Infos */}
+          <div className="mt-4 text-sm text-zinc-400">
+            <p>Match: {activeMatch?.player_name || "-"}</p>
+            <p>Status: {isStreaming ? "Live" : "Off"}</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

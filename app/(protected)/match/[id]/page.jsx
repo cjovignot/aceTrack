@@ -48,9 +48,9 @@ export default function MatchDetailPage() {
 
   const stats = computeStats(points);
 
-const winRate =
-  stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;
- 
+  const winRate =
+    stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;
+
   return (
     <div className="max-w-lg px-4 py-6 mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -77,7 +77,7 @@ const winRate =
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 font-semibold transition border border-gray-200 h-11 rounded-xl hover:bg-gray-50"
+                className="flex-1 font-semibold transition border border-gray-400 h-11 rounded-xl hover:bg-gray-50"
               >
                 Annuler
               </button>
@@ -130,24 +130,30 @@ const winRate =
         <div className="mt-8 space-y-4">
           <h2 className="text-lg font-bold">Statistiques</h2>
           <div className="grid grid-cols-2 gap-3">
-<StatBox label="Points gagnés" value={stats.wins} sub={"/ " + stats.total} />
+            <StatBox
+              label="Points gagnés"
+              value={stats.wins}
+              sub={"/ " + stats.total}
+            />
 
-<StatBox label="Taux de victoire" value={winRate + "%"} />
+            <StatBox label="Taux de victoire" value={winRate + "%"} />
 
-<StatBox label="Aces" value={stats.aces} />
+            <StatBox label="Aces" value={stats.aces} />
 
-<StatBox label="Doubles fautes" value={stats.doubleFaults} neg />
+            <StatBox label="Doubles fautes" value={stats.doubleFaults} neg />
 
-<StatBox label="Winners" value={stats.winners} />
+            <StatBox label="Winners" value={stats.winners} />
 
-<StatBox label="Fautes directes" value={stats.unforcedErrors} neg />
+            <StatBox label="Fautes directes" value={stats.unforcedErrors} neg />
 
-<StatBox label="Fautes provoquées" value={stats.forcedErrors} />
+            <StatBox label="Fautes provoquées" value={stats.forcedErrors} />
 
-<StatBox label="Coups droits gagnants" value={stats.forehandWinners} />
+            <StatBox
+              label="Coups droits gagnants"
+              value={stats.forehandWinners}
+            />
 
-<StatBox label="Revers gagnants" value={stats.backhandWinners} />
-
+            <StatBox label="Revers gagnants" value={stats.backhandWinners} />
           </div>
           <div className="p-5 bg-white border rounded-2xl">
             <h3 className="mb-3 text-sm font-semibold">
