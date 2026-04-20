@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import api from "../../../lib/api";
 
@@ -16,26 +15,47 @@ import {
   RefreshCw,
   Fullscreen,
   Stop,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function StreamPage() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const matchId = params.get("matchId");
+
   const containerRef = useRef(null);
-  const [canvasHeight, setCanvasHeight] = useState(0);
-  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const pollingRef = useRef(null);
+
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+  const [canvasHeight, setCanvasHeight] = useState(0);
   const canvasRef = useRef(null);
-  const animationRef = useRef(null);
+
   const [isStreaming, setIsStreaming] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSize, setRecordingSize] = useState(0);
   const [matches, setMatches] = useState([]);
   const [activeMatch, setActiveMatch] = useState(null);
-  const params = useSearchParams();
-  const matchId = params.get("matchId");
-  const pollingRef = useRef(null);
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(orientation: landscape)");
+
+    const update = () => {
+      setIsLandscape(mediaQuery.matches);
+    };
+
+    update();
+
+    mediaQuery.addEventListener("change", update);
+
+    return () => {
+      mediaQuery.removeEventListener("change", update);
+    };
+  }, []);
 
   useEffect(() => {
     function updateSize() {
@@ -566,6 +586,19 @@ export default function StreamPage() {
             ref={canvasRef}
             className="object-contain w-full h-full bg-black"
           />
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="absolute z-20 flex items-center justify-center w-10 h-10 text-gray-600 rounded-full top-4 left-4 bg-black/50 backdrop-blur"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          {!isLandscape && isStreaming && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/80">
+              <p className="text-lg text-center">
+                Tournez votre téléphone en paysage 📱
+              </p>
+            </div>
+          )}
           {/* 🎛️ OVERLAY CONTROLS (mobile style) */}
           <div className="absolute left-0 right-0 flex justify-center gap-3 bottom-4 md:hidden">
             {!isStreaming ? (

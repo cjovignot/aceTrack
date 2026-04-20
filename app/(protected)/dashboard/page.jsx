@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
       <Link
         href="/new-match"
-        className="flex items-center justify-center w-full h-12 gap-2 mb-6 font-semibold text-white transition bg-cyan-400/50 rounded-xl hover:bg-cyan-400/80"
+        className="flex items-center justify-center w-full h-12 gap-2 mb-6 font-semibold transition border text-cyan-300/50 rounded-2xl bg-none border-cyan-300/50 hover:bg-cyan-400/30 hover:text-white"
       >
         <Plus className="w-4 h-4" /> Nouveau match
       </Link>
@@ -67,15 +67,18 @@ export default function DashboardPage() {
             <Link
               key={m._id}
               href={"/match/" + m._id}
-              className="flex items-center justify-between p-4 transition bg-gray-600/70 rounded-xl hover:shadow-sm"
+              className="flex items-center justify-between p-4 transition rounded-2xl bg-gray-900/30 hover:bg-gray-900/70"
             >
-              <div>
+              <div className="w-full">
                 <p className="mb-1 text-sm text-cyan-300/70">
                   {m.player_name} vs {m.opponent_name}
                 </p>
-                <div className="flex items-baseline gap-1 text-sm">
-                  <p className="text-gray-300">{m.surface}</p> ·{" "}
-                  <p className="text-sm text-red-600">{m.status}</p>
+                <div className="flex items-baseline justify-between gap-1 text-sm">
+                  <div className="flex gap-2">
+                    <p className="text-gray-300/40">{m.surface}</p>
+                    {/* ·{" "} */}
+                  </div>
+                  <p className="text-sm text-red-900">{m.status}</p>
                 </div>
               </div>
 
@@ -92,7 +95,7 @@ export default function DashboardPage() {
 
 function Stat({ icon, value, label }) {
   return (
-    <div className="p-4 text-center bg-gray-700/50 rounded-xl">
+    <div className="p-4 text-center transition bg-gray-700/50 hover:bg-gray-700/80 rounded-2xl">
       <div className="flex justify-center mb-1">{icon}</div>
       <p className="text-xl font-bold text-gray-300">{value}</p>
       <p className="text-xs text-gray-400 mt-0.5">{label}</p>
