@@ -22,7 +22,7 @@ export default function DashboardPage() {
     matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0;
 
   return (
-    <div className="max-w-2xl px-4 py-6 mx-auto">
+    <div className="max-w-2xl mb-20 px-4 py-6 mx-auto">
       {/* <h1 className="mb-1 text-2xl font-bold text-white">
         Bonjour, {user?.name} 🎾
       </h1> */}
