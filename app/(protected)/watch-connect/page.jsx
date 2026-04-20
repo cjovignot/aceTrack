@@ -2,38 +2,60 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import QrScanner from "qr-scanner";
 
 export default function WatchConnect() {
-  const startedRef = useRef(false);
+  const videoRef = useRef(null);
   const scannerRef = useRef(null);
+  const scannedRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
-    let html5QrCode;
-
-    if (startedRef.current) return; // 🛑 bloque double init
-    startedRef.current = true;
+    let scanner;
 
     const start = async () => {
-      const { Html5Qrcode } = await import("html5-qrcode");
+      console.log("Init scanner...");
 
-      html5QrCode = new Html5Qrcode("qr-reader");
-      scannerRef.current = html5QrCode;
+      if (!videoRef.current) {
+        console.log("videoRef not ready");
+        return;
+      }
 
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          html5QrCode.stop();
-          handleRedirect(decodedText);
+      const QrScanner = (await import("qr-scanner")).default;
+
+      scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          if (scannedRef.current) return;
+          scannedRef.current = true;
+
+          console.log("SCAN:", result.data);
+          handleRedirect(result.data);
+        },
+        {
+          preferredCamera: "environment",
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
         },
       );
+
+      try {
+        await scanner.start();
+        console.log("CAMERA STARTED ✅");
+      } catch (err) {
+        console.error("CAMERA ERROR ❌", err);
+      }
+
+      scannerRef.current = scanner;
     };
 
     start();
 
     return () => {
-      html5QrCode?.stop().catch(() => {});
+      if (scanner) {
+        scanner.stop();
+        scanner.destroy();
+      }
     };
   }, []);
 
@@ -47,9 +69,15 @@ export default function WatchConnect() {
   }
 
   return (
-    <div className="max-w-lg px-4 py-6 mx-auto">
-      <h1 className="mb-6 text-2xl font-bold">Connecter ma montre</h1>
-      <div id="qr-reader" className="w-full overflow-hidden rounded-xl" />{" "}
+    <div className="flex">
+      {/* <h1 className="mb-6 text-2xl font-bold">Connecter ma montre</h1> */}
+      <video
+        ref={videoRef}
+        className="w-full h-screen bg-black"
+        muted
+        playsInline
+        style={{ minHeight: "screen" }}
+      />{" "}
     </div>
   );
 }
