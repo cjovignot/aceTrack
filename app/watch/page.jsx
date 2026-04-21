@@ -14,6 +14,19 @@ function gameScoreToNum(s) {
   return parseInt(s) || 0;
 }
 
+function normalizeShotType(type, winner) {
+  if (type === "Ace" || type === "ace") return "ace";
+
+  if (type === "Double faute" || type === "double_fault") return "double_fault";
+
+  if (type === "Faute directe" || type === "unforced_error")
+    return "unforced_error";
+
+  if (type === "Coup droit" || type === "winner") return "winner";
+
+  return type;
+}
+
 function getServeSide(score) {
   if (!score) return "deuce";
   const p = gameScoreToNum(score.current_game_player);
@@ -199,12 +212,14 @@ export default function WatchPage() {
     lastUpdateRef.current = Date.now();
     setMatch(optimisticUpdate);
 
+    const normalizedType = normalizeShotType(shotType, winner);
+
     queueRef.current.push({
       pairingToken,
       match_id: match._id,
       point_winner: winner,
-      shot_type: shotType,
-      isWinner,
+      shot_type: normalizedType,
+      isWinner: normalizedType === "winner" || normalizedType === "ace",
       timestamp: new Date(),
       score_at_point: JSON.stringify(previousScore),
     });
@@ -281,7 +296,7 @@ export default function WatchPage() {
       setServiceFaults(1);
     } else {
       const receiver = match.score.serving === "player" ? "opponent" : "player";
-      scorePoint(receiver, "Double faute", false);
+      scorePoint(receiver, "double_fault", false);
     }
   }
 
@@ -356,13 +371,13 @@ export default function WatchPage() {
       )}
 
       <button
-        onClick={() => scorePoint("player", "Faute directe", false)}
+        onClick={() => scorePoint("opponent", "unforced_error", false)}
         style={cellBtn("#4a1515")}
       >
         Faute
       </button>
       <button
-        onClick={() => scorePoint("opponent", "Coup droit", true)}
+        onClick={() => scorePoint("opponent", "winner", true)}
         style={cellBtn("#1e3a5f")}
       >
         Gagnant
@@ -432,20 +447,20 @@ export default function WatchPage() {
         Service
       </button>
       <button
-        onClick={() => scorePoint(serving, "Ace", true)}
+        onClick={() => scorePoint(serving, "ace", true)}
         style={cellBtn("#1a1a2e")}
       >
         Ace
       </button>
 
       <button
-        onClick={() => scorePoint("opponent", "Faute directe", false)}
+        onClick={() => scorePoint("player", "unforced_error", false)}
         style={cellBtn("#4a1515")}
       >
         Faute
       </button>
       <button
-        onClick={() => scorePoint("player", "Coup droit", true)}
+        onClick={() => scorePoint("player", "winner", true)}
         style={cellBtn("#14532d")}
       >
         Gagnant
