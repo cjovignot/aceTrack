@@ -10,7 +10,7 @@ const surfaces = ["Terre-battue", "Quick", "Green Set", "Terbal"];
 const pill = (active) =>
   "flex-1 p-3 rounded-xl border text-sm font-medium transition " +
   (active
-    ? "border-green-600 bg-green-50 text-green-700"
+    ? "border-cyan-300/40 bg-gray-950 text-cyan-300/70"
     : "border-gray-200 hover:border-gray-300");
 
 export default function NewMatchPage() {
@@ -261,7 +261,7 @@ export default function NewMatchPage() {
         <button
           onClick={handleStart}
           disabled={!form.opponent_first_name.trim() || loading}
-          className="flex items-center justify-center w-full gap-2 font-semibold text-white transition bg-green-600 h-14 hover:bg-green-700 disabled:opacity-50 rounded-xl"
+          className="flex items-center justify-center w-full gap-2 font-semibold transition border text-cyan-300 border-cyan-300/20 bg-gray-950 h-14 hover:bg-cyan-300 hover:text-gray-950 disabled:opacity-50 rounded-xl"
         >
           <Play className="w-5 h-5" />{" "}
           {loading ? "Création..." : "Démarrer le match"}
@@ -272,7 +272,7 @@ export default function NewMatchPage() {
 }
 
 const inp =
-  "w-full h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-green-500";
+  "w-full h-11 px-4 rounded-xl border bg-gray-950 border-cyan-300/20 focus:outline-none focus:border-green-500";
 function Section({ title, children }) {
   return (
     <div>
@@ -302,7 +302,7 @@ function SwitchRow({ label, desc, checked, onChange }) {
         onClick={() => onChange(!checked)}
         className={
           "relative inline-flex h-6 w-11 items-center rounded-full transition-colors " +
-          (checked ? "bg-green-600" : "bg-gray-200")
+          (checked ? "bg-cyan-300/70" : "bg-gray-900")
         }
       >
         <span

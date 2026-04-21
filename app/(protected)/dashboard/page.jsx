@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
       <Link
         href="/new-match"
-        className="flex items-center justify-center w-full h-12 gap-2 mb-6 font-semibold transition border text-cyan-300/50 rounded-2xl bg-none border-cyan-300/50 hover:bg-cyan-400/30 hover:text-white"
+        className="flex items-center justify-center w-full h-12 gap-2 mb-6 font-semibold transition border text-cyan-300/50 rounded-2xl bg-none border-cyan-300/50 hover:bg-cyan-300/50 hover:text-white"
       >
         <Plus className="w-4 h-4" /> Nouveau match
       </Link>

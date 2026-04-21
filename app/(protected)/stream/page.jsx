@@ -604,7 +604,7 @@ export default function StreamPage() {
             {!isStreaming ? (
               <button
                 onClick={startCamera}
-                className="flex items-center justify-center h-10 px-5 py-4 bg-green-600 rounded-full shadow-lg text-md"
+                className="flex items-center justify-center h-10 px-5 py-4 rounded-full shadow-lg bg-green-600/70 text-md"
               >
                 Démarrer
               </button>
@@ -612,7 +612,7 @@ export default function StreamPage() {
               <>
                 <button
                   onClick={stopCamera}
-                  className="flex items-center justify-center h-10 px-5 py-4 bg-red-600 rounded-full shadow-lg text-md"
+                  className="flex items-center justify-center h-10 px-5 py-4 rounded-full shadow-lg bg-red-900/70 text-md"
                 >
                   Stop
                 </button>
@@ -620,14 +620,14 @@ export default function StreamPage() {
                 {!isRecording ? (
                   <button
                     onClick={startRecording}
-                    className="flex items-center justify-center h-10 px-5 py-4 text-red-600 bg-white rounded-full shadow-lg text-md"
+                    className="flex items-center justify-center h-10 px-5 py-4 bg-transparent bg-white border rounded-full shadow-lg border-red-900/60 text-red-900/80 text-md"
                   >
                     ● REC
                   </button>
                 ) : (
                   <button
                     onClick={stopRecording}
-                    className="px-6 py-3 bg-red-600 rounded-full shadow-lg"
+                    className="flex items-center justify-center h-10 px-5 py-4 bg-transparent border rounded-full shadow-lg border-red-900/60 text-red-900/80 text-md"
                   >
                     Stop REC
                   </button>
