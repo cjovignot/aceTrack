@@ -131,7 +131,7 @@ export default function LiveScorePage() {
         </p>
         <button
           onClick={() => router.push("/new-match")}
-          className="px-6 py-3 font-semibold text-white transition bg-green-600 rounded-xl hover:bg-green-700"
+          className="px-6 py-3 font-semibold transition border text-cyan-300/70 hover:bg-cyan-300/70 border-cyan-300/40 rounded-xl hover:bg-green-700 hover:text-white bg-gray-950"
         >
           Créer un match
         </button>
