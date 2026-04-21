@@ -158,7 +158,7 @@ export default function WatchPage() {
           "x-pairing-token": pairingToken,
         },
         body: JSON.stringify(item),
-      })
+      }),
     );
 
     Promise.all(promises)
@@ -269,8 +269,7 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver =
-        match.score.serving === "player" ? "opponent" : "player";
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver, "Double faute", false);
     }
   }
@@ -300,58 +299,143 @@ export default function WatchPage() {
   });
 
   return (
-    <div style={{
-      background: "#000",
-      color: "#fff",
-      position: "fixed",
-      inset: 0,
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr 1fr",
-      gridTemplateRows: "1fr 1fr 1fr 1fr",
-      gap: 3,
-      padding: 3,
-    }}>
+    <div
+      style={{
+        background: "#000",
+        color: "#fff",
+        position: "fixed",
+        inset: 0,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gridTemplateRows: "1fr 1fr 1fr 1fr",
+        gap: 3,
+        padding: 3,
+      }}
+    >
       {!isConnected && pairingToken && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9999,
-          background: "#000",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 18,
-          padding: 20,
-        }}>
-          <p style={{ color: "#4ade80", fontSize: 18 }}>
-            Connecter la montre
-          </p>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            padding: 20,
+          }}
+        >
+          <p style={{ color: "#4ade80", fontSize: 18 }}>Connecter la montre</p>
 
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-              `${window.location.origin}/connect?token=${pairingToken}`
+              `${window.location.origin}/connect?token=${pairingToken}`,
             )}`}
             width={220}
           />
         </div>
       )}
 
-      <button onClick={() => scorePoint("player", "Faute directe", false)} style={cellBtn("#4a1515")}>Faute</button>
-      <button onClick={() => scorePoint("opponent", "Coup droit", true)} style={cellBtn("#1e3a5f")}>Gagnant</button>
+      <button
+        onClick={() => scorePoint("player", "Faute directe", false)}
+        style={cellBtn("#4a1515")}
+      >
+        Faute
+      </button>
+      <button
+        onClick={() => scorePoint("opponent", "Coup droit", true)}
+        style={cellBtn("#1e3a5f")}
+      >
+        Gagnant
+      </button>
       <div />
 
-      <div style={{ gridColumn: "1 / 3", gridRow: "2 / 4" }}>
-        <div>{score.current_game_opponent || "0"}</div>
-        <div>{score.current_game_player || "0"}</div>
+      <div
+        style={{
+          gridColumn: "1 / 3",
+          gridRow: "2 / 4",
+          background: "#0a0a0a",
+          borderRadius: 6,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          position: "relative",
+          gap: 4,
+        }}
+      >
+        {/* Serve indicator */}
+        <div
+          style={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#facc15",
+            ...(serving === "player"
+              ? serveSide === "deuce"
+                ? { bottom: 5, right: 5 }
+                : { bottom: 5, left: 5 }
+              : serveSide === "deuce"
+                ? { top: 5, left: 5 }
+                : { top: 5, right: 5 }),
+          }}
+        />
+
+        {/* Opponent */}
+        <div style={{ fontSize: 22 }}>
+          {setsO.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_opponent || "0"}
+          </span>
+        </div>
+
+        <div style={{ width: "70%", height: 1, background: "#222" }} />
+
+        {/* Player */}
+        <div style={{ fontSize: 22 }}>
+          {setsP.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_player || "0"}
+          </span>
+        </div>
       </div>
 
-      <button onClick={handleServiceFault} style={cellBtn("#2d1a00")}>Service</button>
-      <button onClick={() => scorePoint(serving, "Ace", true)} style={cellBtn("#1a1a2e")}>Ace</button>
+      <button onClick={handleServiceFault} style={cellBtn("#2d1a00")}>
+        Service
+      </button>
+      <button
+        onClick={() => scorePoint(serving, "Ace", true)}
+        style={cellBtn("#1a1a2e")}
+      >
+        Ace
+      </button>
 
-      <button onClick={() => scorePoint("opponent", "Faute directe", false)} style={cellBtn("#4a1515")}>Faute</button>
-      <button onClick={() => scorePoint("player", "Coup droit", true)} style={cellBtn("#14532d")}>Gagnant</button>
-      <button onClick={handleUndo} style={cellBtn("#111")}>↩</button>
+      <button
+        onClick={() => scorePoint("opponent", "Faute directe", false)}
+        style={cellBtn("#4a1515")}
+      >
+        Faute
+      </button>
+      <button
+        onClick={() => scorePoint("player", "Coup droit", true)}
+        style={cellBtn("#14532d")}
+      >
+        Gagnant
+      </button>
+      <button onClick={handleUndo} style={cellBtn("#111")}>
+        ↩
+      </button>
 
       {isFinished && <div>Fin</div>}
     </div>
