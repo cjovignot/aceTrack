@@ -348,23 +348,22 @@ export default function WatchPage() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 18,
-            padding: 20,
+            justifyContent: "end",
+            gap: 10,
           }}
-          className="w-fit"
+          className="p-2 pb-5 w-fit"
         >
           <p
             className="flex text-center w-fit"
-            style={{ color: "#4ade80", fontSize: 16 }}
+            style={{ color: "#4ade80", fontSize: 14 }}
           >
-            Scannez depuis votre smartphone pour connecter votre montre
+            Scannez depuis votre l'app pour connecter votre montre
           </p>
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
               `${window.location.origin}/connect?token=${pairingToken}`,
             )}`}
-            width={220}
+            width={210}
           />
         </div>
       )}
