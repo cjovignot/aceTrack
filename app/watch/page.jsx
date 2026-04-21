@@ -369,7 +369,7 @@ export default function WatchPage() {
       )}
 
       <button
-        onClick={() => scorePoint("opponent", "unforced_error", false)}
+        onClick={() => scorePoint("player", "unforced_error", false)}
         style={cellBtn("#4a1515")}
       >
         Faute
@@ -452,7 +452,7 @@ export default function WatchPage() {
       </button>
 
       <button
-        onClick={() => scorePoint("player", "unforced_error", false)}
+        onClick={() => scorePoint("opponent", "unforced_error", false)}
         style={cellBtn("#4a1515")}
       >
         Faute
