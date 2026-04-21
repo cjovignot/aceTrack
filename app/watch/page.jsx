@@ -144,32 +144,33 @@ export default function WatchPage() {
 
   // ---------- QUEUE ----------
   function flushQueue() {
-    if (sendingRef.current || queueRef.current.length === 0) return;
+  if (sendingRef.current || queueRef.current.length === 0) return;
 
-    sendingRef.current = true;
+  sendingRef.current = true;
 
-    const batch = [...queueRef.current];
-    queueRef.current = [];
+  const batch = [...queueRef.current];
+  queueRef.current = [];
 
-    const promises = batch.map((item) => {
-      return fetch("/api/points", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-        body: JSON.stringify(item),
-      });
+  const promises = batch.map((item) => {
+    return fetch("/api/points", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(item),
     });
+  });
 
-    Promise.all(promises)
-      .catch(() => {
-        queueRef.current.unshift(...batch);
-      })
-      .finally(() => {
-        sendingRef.current = false;
-        flushQueue();
-      });
+  Promise.all(promises)
+    .catch(() => {
+      queueRef.current.unshift(...batch);
+    })
+    .finally(() => {
+      sendingRef.current = false;
+      flushQueue();
+    });
+}
 
     // ---------- SCORE ----------
     function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
