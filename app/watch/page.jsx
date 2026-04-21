@@ -358,14 +358,13 @@ export default function WatchPage() {
             src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
               `${window.location.origin}/connect?token=${pairingToken}`,
             )}`}
-            width={230}
+            width={220}
           />
           <p
             className="flex text-center w-fit"
-            style={{ color: "#4ade80", fontSize: 12 }}
+            style={{ color: "#4ade80", fontSize: 16 }}
           >
-            Utilisez le scanner depuis votre smartphone pour connecter votre
-            montre
+            Scannez depuis votre smartphone pour connecter votre montre
           </p>
         </div>
       )}
