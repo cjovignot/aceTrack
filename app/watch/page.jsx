@@ -25,6 +25,8 @@ export default function WatchPage() {
   const searchParams = useSearchParams();
 
   const lastUpdateRef = useRef(0);
+  const historyRef = useRef([]);
+  const undoLockRef = useRef(false);
 
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
@@ -180,6 +182,11 @@ export default function WatchPage() {
     const previousScore = JSON.parse(JSON.stringify(match.score));
     const result = addPoint(match.score, winner);
 
+    historyRef.current.push({
+      score: JSON.parse(JSON.stringify(match.score)),
+      matchSnapshot: match,
+    });
+
     const optimisticUpdate = {
       ...match,
       score: result.score,
@@ -219,6 +226,10 @@ export default function WatchPage() {
 
   // ---------- UNDO ----------
   async function handleUndo() {
+    if (undoLockRef.current) return;
+    undoLockRef.current = true;
+    setTimeout(() => (undoLockRef.current = false), 300);
+
     if (!match) return;
 
     const res = await fetch(`/api/points?match_id=${match._id}`, {
@@ -326,15 +337,21 @@ export default function WatchPage() {
             gap: 18,
             padding: 20,
           }}
+          className="w-fit"
         >
-          <p style={{ color: "#4ade80", fontSize: 18 }}>Connecter la montre</p>
-
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
               `${window.location.origin}/connect?token=${pairingToken}`,
             )}`}
-            width={220}
+            width={230}
           />
+          <p
+            className="flex text-center w-fit"
+            style={{ color: "#4ade80", fontSize: 12 }}
+          >
+            Utilisez le scanner depuis votre smartphone pour connecter votre
+            montre
+          </p>
         </div>
       )}
 
