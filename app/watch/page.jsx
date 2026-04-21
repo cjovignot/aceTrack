@@ -350,22 +350,22 @@ export default function WatchPage() {
             alignItems: "center",
             justifyContent: "center",
             gap: 18,
-            padding: 30,
+            padding: 20,
           }}
           className="w-fit"
         >
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-              `${window.location.origin}/connect?token=${pairingToken}`,
-            )}`}
-            width={220}
-          />
           <p
             className="flex text-center w-fit"
             style={{ color: "#4ade80", fontSize: 16 }}
           >
             Scannez depuis votre smartphone pour connecter votre montre
           </p>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+              `${window.location.origin}/connect?token=${pairingToken}`,
+            )}`}
+            width={220}
+          />
         </div>
       )}
 
