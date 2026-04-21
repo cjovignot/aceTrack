@@ -15,6 +15,29 @@ export default function MatchDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // ---------------- UTILS ----------------
+  function normalizePoint(p) {
+    return {
+      ...p,
+
+      // sécurisation des anciens formats
+      shot_type: normalizeShotType(p.shot_type),
+      isWinner: p.isWinner ?? p.point_winner === "player",
+    };
+  }
+
+  function normalizeShotType(type) {
+    if (!type) return "";
+
+    const t = type.toLowerCase();
+
+    if (t.includes("ace")) return "ace";
+    if (t.includes("double")) return "double_fault";
+    if (t.includes("faute")) return "unforced_error";
+    if (t.includes("coup") || t.includes("winner")) return "winner";
+
+    return type;
+  }
   useEffect(() => {
     Promise.all([
       api.get("/api/matches/" + id),
@@ -46,13 +69,14 @@ export default function MatchDetailPage() {
       </div>
     );
 
-  const stats = computeStats(points);
+  const normalizedPoints = points.map(normalizePoint);
+  const stats = computeStats(normalizedPoints);
 
   const winRate =
     stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;
 
   return (
-    <div className="max-w-lg mb-20 px-4 py-6 mx-auto">
+    <div className="max-w-lg px-4 py-6 mx-auto mb-20">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => router.push("/dashboard")}
