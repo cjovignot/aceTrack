@@ -350,7 +350,7 @@ export default function WatchPage() {
             alignItems: "center",
             justifyContent: "center",
             gap: 18,
-            padding: 20,
+            padding: 30,
           }}
           className="w-fit"
         >
