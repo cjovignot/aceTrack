@@ -14,17 +14,17 @@ function gameScoreToNum(s) {
   return parseInt(s) || 0;
 }
 
-function normalizeShotType(type, winner) {
-  if (type === "Ace" || type === "ace") return "ace";
+function normalizeShotType(type) {
+  if (!type) return "winner";
 
-  if (type === "Double faute" || type === "double_fault") return "double_fault";
+  const t = type.toLowerCase();
 
-  if (type === "Faute directe" || type === "unforced_error")
-    return "unforced_error";
+  if (t.includes("ace")) return "ace";
+  if (t.includes("double")) return "double_fault";
+  if (t.includes("faute")) return "unforced_error";
+  if (t.includes("coup") || t.includes("winner")) return "winner";
 
-  if (type === "Coup droit" || type === "winner") return "winner";
-
-  return type;
+  return "winner";
 }
 
 function getServeSide(score) {
@@ -157,36 +157,36 @@ export default function WatchPage() {
   }
 
   // ---------- QUEUE ----------
-async function flushQueue() {
-  if (sendingRef.current) return;
-  if (queueRef.current.length === 0) return;
+  async function flushQueue() {
+    if (sendingRef.current) return;
+    if (queueRef.current.length === 0) return;
 
-  sendingRef.current = true;
+    sendingRef.current = true;
 
-  const item = queueRef.current.shift();
+    const item = queueRef.current.shift();
 
-  try {
-    await fetch("/api/points", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify(item),
-    });
-  } catch (e) {
-    // retry
-    queueRef.current.unshift(item);
+    try {
+      await fetch("/api/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify(item),
+      });
+    } catch (e) {
+      // retry
+      queueRef.current.unshift(item);
+    }
+
+    sendingRef.current = false;
+
+    // 🔁 continuer sans bloquer UI
+    setTimeout(flushQueue, 0);
   }
 
-  sendingRef.current = false;
-
-  // 🔁 continuer sans bloquer UI
-  setTimeout(flushQueue, 0);
-}
-
   // ---------- SCORE ----------
-  function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
+  function scorePoint(winner, shotType = "winner", isWinner = true) {
     if (!match) return;
 
     setServiceFaults(0);
@@ -194,10 +194,10 @@ async function flushQueue() {
     const previousScore = JSON.parse(JSON.stringify(match.score));
     const result = addPoint(match.score, winner);
 
-historyRef.current.push({
-  matchSnapshot: JSON.parse(JSON.stringify(match)),
-  client_id: clientId,
-});
+    historyRef.current.push({
+      matchSnapshot: JSON.parse(JSON.stringify(match)),
+      client_id: clientId,
+    });
 
     const optimisticUpdate = {
       ...match,
@@ -213,18 +213,18 @@ historyRef.current.push({
 
     const normalizedType = normalizeShotType(shotType, winner);
 
-const clientId = Date.now() + "_" + Math.random();
+    const clientId = Date.now() + "_" + Math.random();
 
-queueRef.current.push({
-  client_id: clientId, // 🔥 IMPORTANT
-  pairingToken,
-  match_id: match._id,
-  point_winner: winner,
-  shot_type: normalizedType,
-  isWinner: normalizedType === "winner" || normalizedType === "ace",
-  timestamp: new Date(),
-  score_at_point: JSON.stringify(previousScore),
-});
+    queueRef.current.push({
+      client_id: clientId, // 🔥 IMPORTANT
+      pairingToken,
+      match_id: match._id,
+      point_winner: winner,
+      shot_type: normalizedType,
+      isWinner: normalizedType === "winner" || normalizedType === "ace",
+      timestamp: new Date(),
+      score_at_point: JSON.stringify(previousScore),
+    });
 
     flushQueue();
 
@@ -242,66 +242,64 @@ queueRef.current.push({
   }
 
   // ---------- UNDO ----------
-async function handleUndo() {
-  if (undoLockRef.current) return;
+  async function handleUndo() {
+    if (undoLockRef.current) return;
 
-  undoLockRef.current = true;
-  setTimeout(() => (undoLockRef.current = false), 200);
+    undoLockRef.current = true;
+    setTimeout(() => (undoLockRef.current = false), 200);
 
-  if (!match) return;
+    if (!match) return;
 
-  const last = historyRef.current.pop();
-  if (!last) return;
+    const last = historyRef.current.pop();
+    if (!last) return;
 
-  // 🔥 restore UI instant
-  const optimistic = {
-    ...last.matchSnapshot,
-    updatedAt: new Date().toISOString(),
-  };
+    // 🔥 restore UI instant
+    const optimistic = {
+      ...last.matchSnapshot,
+      updatedAt: new Date().toISOString(),
+    };
 
-  lastUpdateRef.current = Date.now();
-  setMatch(optimistic);
+    lastUpdateRef.current = Date.now();
+    setMatch(optimistic);
 
-  // 🔥 enlever de la queue si pas encore envoyé
-  const index = queueRef.current.findIndex(
-    (p) => p.client_id === last.client_id
-  );
+    // 🔥 enlever de la queue si pas encore envoyé
+    const index = queueRef.current.findIndex(
+      (p) => p.client_id === last.client_id,
+    );
 
-  if (index !== -1) {
-    queueRef.current.splice(index, 1);
-  } else {
-    // 🔥 sinon soft delete en DB
-    try {
-      const res = await fetch(
-        `/api/points?match_id=${match._id}`
-      );
-      const points = await res.json();
+    if (index !== -1) {
+      queueRef.current.splice(index, 1);
+    } else {
+      // 🔥 sinon soft delete en DB
+      try {
+        const res = await fetch(`/api/points?match_id=${match._id}`);
+        const points = await res.json();
 
-      if (points.length) {
-        const lastPoint = points[0];
+        if (points.length) {
+          const lastPoint = points[0];
 
-        await fetch(`/api/points/${lastPoint._id}`, {
-          method: "PATCH", // 🔥 soft delete
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+          await fetch(`/api/points/${lastPoint._id}`, {
+            method: "PATCH", // 🔥 soft delete
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        }
+      } catch (e) {
+        console.error("Undo delete failed", e);
       }
-    } catch (e) {
-      console.error("Undo delete failed", e);
     }
-  }
 
-  // 🔥 sync match
-  fetch(`/api/matches/${match._id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-    body: JSON.stringify(optimistic),
-  }).catch(() => {});
-}
+    // 🔥 sync match
+    fetch(`/api/matches/${match._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(optimistic),
+    }).catch(() => {});
+  }
 
   function handleServiceFault() {
     if (serviceFaults === 0) {
