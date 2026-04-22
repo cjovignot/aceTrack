@@ -105,10 +105,8 @@ export default function MatchDetailPage() {
     totalPoints > 0 ? (playerStats.player.winners / totalPoints) * 100 : 0;
 
   const opponentRate =
-    totalPoints > 0 ? (opponentStats.player.winners / totalPoints) * 100 : 0;
-
-  console.log(playerStats);
-  console.log(opponentStats);
+    totalPoints > 0 ? (playerStats.opponent.winners / totalPoints) * 100 : 0;
+    
 
   // ---------------- UI ----------------
   return (
