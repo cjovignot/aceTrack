@@ -72,30 +72,43 @@ export default function MatchDetailPage() {
     );
   }
 
-// ---------------- STATS ----------------
-const cleanPoints = points.filter((p) => !p.is_deleted);
-const normalizedPoints = cleanPoints.map(normalizePoint);
+  // ---------------- STATS ----------------
+  const cleanPoints = points.filter((p) => !p.is_deleted);
+  const normalizedPoints = cleanPoints.map(normalizePoint);
 
-// points gagnés par chaque joueur
-const playerPoints = normalizedPoints.filter(
-  (p) => p.point_winner === "player"
-);
+  // points gagnés par chaque joueur
+  const playerPoints = normalizedPoints.filter(
+    (p) => p.point_winner === "player",
+  );
 
-const opponentPoints = normalizedPoints.filter(
-  (p) => p.point_winner === "opponent"
-);
+  const opponentPoints = normalizedPoints.filter(
+    (p) => p.point_winner === "opponent",
+  );
 
-// calcul stats séparées
-const playerStats = computeStats(playerPoints);
-const opponentStats = computeStats(opponentPoints);
+  // calcul stats séparées
+  const playerStats = computeStats(playerPoints);
+  const opponentStats = computeStats(opponentPoints);
 
-// winrate basé sur TOUS les points
-const totalPoints = normalizedPoints.length;
+  // winrate basé sur TOUS les points
+  const totalPoints = normalizedPoints.length;
 
-const winRate =
-  totalPoints > 0
-    ? Math.round((playerStats.wins / totalPoints) * 100)
-    : 0;
+  const winRate =
+    totalPoints > 0
+      ? Math.round(
+          (playerStats.player.winners /
+            (playerStats.player.winners + playerStats.opponent.winners)) *
+            100,
+        )
+      : 0;
+
+  const playerRate =
+    totalPoints > 0 ? (playerStats.player.winners / totalPoints) * 100 : 0;
+
+  const opponentRate =
+    totalPoints > 0 ? (opponentStats.player.winners / totalPoints) * 100 : 0;
+
+  console.log(playerStats);
+  console.log(opponentStats);
 
   // ---------------- UI ----------------
   return (
@@ -172,8 +185,7 @@ const winRate =
       {/* INFOS */}
       <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
         <span className="flex items-center gap-1">
-          <MapPin className="w-3 h-3" />
-          {match.surface}
+          <p className="text-lg">🎾</p> {match.surface}
         </span>
         {match.duration_minutes && (
           <span className="flex items-center gap-1">
@@ -184,80 +196,95 @@ const winRate =
       </div>
 
       {/* STATS */}
-      {playerStats.total > 0 && (
-        <div className="mt-8 space-y-6">
-          <h2 className="text-lg font-bold">Statistiques</h2>
+      {playerStats && (
+        <div className="mt-10 space-y-6">
+          <h2 className="text-lg font-semibold text-center text-cyan-300/80">
+            Statistiques
+          </h2>
 
-          <div className="space-y-4">
+          <div className="px-4 space-y-4">
             <StatBar
               label="Points gagnés"
-              playerValue={playerStats.wins}
-              opponentValue={opponentStats.wins}
+              playerValue={playerStats.player.winners}
+              opponentValue={playerStats.opponent.winners}
             />
 
             <StatBar
               label="Aces"
-              playerValue={playerStats.aces}
-              opponentValue={opponentStats.aces}
+              playerValue={playerStats.player.aces}
+              opponentValue={playerStats.opponent.aces}
             />
 
             <StatBar
               label="Doubles fautes"
-              playerValue={playerStats.doubleFaults}
-              opponentValue={opponentStats.doubleFaults}
+              playerValue={playerStats.player.doubleFaults}
+              opponentValue={playerStats.opponent.doubleFaults}
             />
 
             <StatBar
               label="Winners"
-              playerValue={playerStats.winners}
-              opponentValue={opponentStats.winners}
+              playerValue={playerStats.player.winners}
+              opponentValue={playerStats.opponent.winners}
             />
 
-            <StatBar
+            {/* <StatBar
               label="Fautes directes"
               playerValue={playerStats.unforcedErrors}
-              opponentValue={opponentStats.unforcedErrors}
-            />
+              opponentValue={playerStats.unforcedErrors}
+            /> */}
 
-            <StatBar
+            {/* <StatBar
               label="Fautes provoquées"
               playerValue={playerStats.forcedErrors}
-              opponentValue={opponentStats.forcedErrors}
-            />
+              opponentValue={playerStats.forcedErrors}
+            /> */}
 
-            <StatBar
+            {/* <StatBar
               label="Coup droit gagnant"
               playerValue={playerStats.forehandWinners}
-              opponentValue={opponentStats.forehandWinners}
-            />
+              opponentValue={playerStats.forehandWinners}
+            /> */}
 
-            <StatBar
+            {/* <StatBar
               label="Revers gagnant"
               playerValue={playerStats.backhandWinners}
-              opponentValue={opponentStats.backhandWinners}
-            />
+              opponentValue={playerStats.backhandWinners}
+            /> */}
           </div>
 
           {/* WIN RATE */}
-          <div className="p-5 bg-white border rounded-2xl">
+          <div className="p-5 border border-cyan-300/80 bg-gray/85 rounded-2xl">
             <h3 className="mb-3 text-sm font-semibold">
               Répartition des points
             </h3>
 
             <div className="flex items-center gap-3">
+              {/* PLAYER */}
               <span className="text-sm font-bold text-green-600">
-                {winRate}%
+                {playerRate.toFixed(0)} %
               </span>
 
-              <div className="flex-1 h-3 overflow-hidden bg-gray-100 rounded-full">
+              {/* BARRE CENTRÉE */}
+              <div className="relative flex-1 h-3 overflow-hidden bg-gray-100 rounded-full">
+                {/* axe central */}
+                <div className="absolute top-0 bottom-0 w-px left-1/2 bg-gray-400/40" />
+
+                {/* player gauche */}
                 <div
-                  className="h-full bg-green-600 rounded-full"
-                  style={{ width: winRate + "%" }}
+                  className="absolute top-0 h-full bg-green-600 right-1/2"
+                  style={{ width: `${playerRate}%` }}
+                />
+
+                {/* opponent droite */}
+                <div
+                  className="absolute top-0 h-full bg-gray-400 left-1/2"
+                  style={{ width: `${opponentRate}%` }}
                 />
               </div>
 
+              {/* OPPONENT */}
               <span className="text-sm font-bold text-gray-400">
-                {100 - winRate}%
+                {opponentRate.toFixed(0)} %
               </span>
             </div>
           </div>
@@ -271,11 +298,8 @@ const winRate =
 function StatBar({ label, playerValue, opponentValue }) {
   const total = playerValue + opponentValue;
 
-  const playerPct =
-    total > 0 ? Math.round((playerValue / total) * 100) : 0;
-
-  const opponentPct =
-    total > 0 ? Math.round((opponentValue / total) * 100) : 0;
+  const playerPct = total > 0 ? (playerValue / total) * 100 : 0;
+  const opponentPct = total > 0 ? (opponentValue / total) * 100 : 0;
 
   return (
     <div className="space-y-1">
@@ -285,20 +309,32 @@ function StatBar({ label, playerValue, opponentValue }) {
         <span>{opponentValue}</span>
       </div>
 
-      <div className="flex h-3 overflow-hidden rounded-full bg-gray-200">
+      {/* BARRE CENTRÉE FIXE */}
+      <div className="relative h-3 overflow-hidden bg-gray-200 rounded-full">
+        {/* axe 0 toujours au centre */}
+        <div className="absolute top-0 bottom-0 w-px left-1/2 bg-black/40" />
+
+        {/* PLAYER (gauche) */}
         <div
-          className="bg-green-600"
-          style={{ width: playerPct + "%" }}
+          className="absolute top-0 h-full bg-green-600 right-1/2"
+          style={{
+            width: `${playerPct}%`,
+          }}
         />
+
+        {/* OPPONENT (droite) */}
         <div
-          className="bg-gray-400"
-          style={{ width: opponentPct + "%" }}
+          className="absolute top-0 h-full bg-orange-400 left-1/2"
+          style={{
+            width: `${opponentPct}%`,
+          }}
         />
       </div>
 
       <div className="flex justify-between text-xs font-bold">
-        <span className="text-green-600">{playerPct}%</span>
-        <span className="text-gray-400">{opponentPct}%</span>
+        <span className="text-green-600">{playerPct.toFixed(0)} %</span>
+
+        <span className="text-orange-400">{opponentPct.toFixed(0)} %</span>
       </div>
     </div>
   );

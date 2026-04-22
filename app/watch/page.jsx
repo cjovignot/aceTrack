@@ -194,6 +194,10 @@ export default function WatchPage() {
     const previousScore = JSON.parse(JSON.stringify(match.score));
     const result = addPoint(match.score, winner);
 
+    // ✅ créer AVANT usage
+    const clientId = Date.now() + "_" + Math.random();
+
+    // ✅ stocker dans history (clé pour undo fiable)
     historyRef.current.push({
       matchSnapshot: JSON.parse(JSON.stringify(match)),
       client_id: clientId,
@@ -211,12 +215,10 @@ export default function WatchPage() {
     lastUpdateRef.current = Date.now();
     setMatch(optimisticUpdate);
 
-    const normalizedType = normalizeShotType(shotType, winner);
-
-    const clientId = Date.now() + "_" + Math.random();
+    const normalizedType = normalizeShotType(shotType);
 
     queueRef.current.push({
-      client_id: clientId, // 🔥 IMPORTANT
+      client_id: clientId, // 🔥 cohérent avec history
       pairingToken,
       match_id: match._id,
       point_winner: winner,
@@ -262,7 +264,7 @@ export default function WatchPage() {
     lastUpdateRef.current = Date.now();
     setMatch(optimistic);
 
-    // 🔥 enlever de la queue si pas encore envoyé
+    // 🔥 enlever de la queue si pas encore envoyée
     const index = queueRef.current.findIndex(
       (p) => p.client_id === last.client_id,
     );
@@ -270,21 +272,39 @@ export default function WatchPage() {
     if (index !== -1) {
       queueRef.current.splice(index, 1);
     } else {
-      // 🔥 sinon soft delete en DB
       try {
-        const res = await fetch(`/api/points?match_id=${match._id}`);
+        // ✅ AUTH OBLIGATOIRE (watch + mobile)
+        const res = await fetch(`/api/points?match_id=${match._id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            "x-pairing-token": pairingToken,
+          },
+        });
+
         const points = await res.json();
 
-        if (points.length) {
-          const lastPoint = points[0];
+        if (!Array.isArray(points) || points.length === 0) return;
 
-          await fetch(`/api/points/${lastPoint._id}`, {
-            method: "PATCH", // 🔥 soft delete
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-        }
+        // 🔥 sécurise : ignore déjà supprimés
+        const validPoints = points
+          .filter((p) => !p.is_deleted)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const lastPoint = validPoints[0];
+
+        if (!lastPoint) return;
+
+        // 🔥 soft delete (stats-friendly)
+        await fetch(`/api/points/${lastPoint._id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pairing-token": pairingToken,
+          },
+          body: JSON.stringify({
+            is_deleted: true,
+          }),
+        });
       } catch (e) {
         console.error("Undo delete failed", e);
       }

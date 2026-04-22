@@ -18,7 +18,7 @@ export async function POST() {
   await redis.set(
     `pairing:${token}`,
     JSON.stringify(pairing),
-    { ex: 600 }, // TTL 10 min
+    { ex: 60 * 60 * 6 }, // 6h
   );
 
   return Response.json({ token });
