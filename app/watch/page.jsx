@@ -241,38 +241,49 @@ export default function WatchPage() {
 
   // ---------- UNDO ----------
   async function handleUndo() {
-    if (undoLockRef.current) return;
-    undoLockRef.current = true;
-    setTimeout(() => (undoLockRef.current = false), 300);
+  if (undoLockRef.current) return;
 
-    if (!match) return;
+  undoLockRef.current = true;
+  setTimeout(() => (undoLockRef.current = false), 300);
 
-    const res = await fetch(`/api/points?match_id=${match._id}`, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-    });
+  if (!match) return;
 
-    const points = await res.json();
-    if (!points.length) return;
+  // 🔥 empêcher les points en attente
+  queueRef.current = [];
+  sendingRef.current = false;
 
-    const lastPoint = points[0];
-    if (!lastPoint.score_at_point) return;
+  // 🔥 récupérer dernier point depuis DB (tri sécurisé)
+  const res = await fetch(`/api/points?match_id=${match._id}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+  });
 
-    const previousScore = JSON.parse(lastPoint.score_at_point);
+  const points = await res.json();
+  if (!points.length) return;
 
-    const optimistic = {
-      ...match,
-      score: previousScore,
-      status: "En cours",
-      winner: null,
-      updatedAt: new Date().toISOString(),
-    };
+  points.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const lastPoint = points[0];
 
-    lastUpdateRef.current = Date.now();
-    setMatch(optimistic);
+  if (!lastPoint.score_at_point) return;
 
+  const previousScore = JSON.parse(lastPoint.score_at_point);
+
+  // 🔥 update UI immédiat
+  const optimistic = {
+    ...match,
+    score: previousScore,
+    status: "En cours",
+    winner: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  lastUpdateRef.current = Date.now();
+  setMatch(optimistic);
+
+  try {
+    // 🔥 update match
     await fetch(`/api/matches/${match._id}`, {
       method: "PATCH",
       headers: {
@@ -282,6 +293,7 @@ export default function WatchPage() {
       body: JSON.stringify(optimistic),
     });
 
+    // 🔥 delete point
     await fetch(`/api/points/${lastPoint._id}`, {
       method: "DELETE",
       headers: {
@@ -289,7 +301,10 @@ export default function WatchPage() {
         "x-pairing-token": pairingToken,
       },
     });
+  } catch (e) {
+    console.error("Undo failed", e);
   }
+}
 
   function handleServiceFault() {
     if (serviceFaults === 0) {
