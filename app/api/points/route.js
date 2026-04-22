@@ -65,9 +65,10 @@ export async function GET(request) {
     );
   }
 
-  const points = await PointLog.find({ match_id }).sort({
-    createdAt: -1,
-  });
+const points = await PointLog.find({
+  match_id,
+  is_deleted: { $ne: true },
+}).sort({ createdAt: -1 });
 
   return NextResponse.json(points);
 }

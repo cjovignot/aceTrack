@@ -194,10 +194,10 @@ async function flushQueue() {
     const previousScore = JSON.parse(JSON.stringify(match.score));
     const result = addPoint(match.score, winner);
 
-    historyRef.current.push({
-      score: JSON.parse(JSON.stringify(match.score)),
-      matchSnapshot: match,
-    });
+historyRef.current.push({
+  matchSnapshot: JSON.parse(JSON.stringify(match)),
+  client_id: clientId,
+});
 
     const optimisticUpdate = {
       ...match,
@@ -213,15 +213,18 @@ async function flushQueue() {
 
     const normalizedType = normalizeShotType(shotType, winner);
 
-    queueRef.current.push({
-      pairingToken,
-      match_id: match._id,
-      point_winner: winner,
-      shot_type: normalizedType,
-      isWinner: normalizedType === "winner" || normalizedType === "ace",
-      timestamp: new Date(),
-      score_at_point: JSON.stringify(previousScore),
-    });
+const clientId = Date.now() + "_" + Math.random();
+
+queueRef.current.push({
+  client_id: clientId, // 🔥 IMPORTANT
+  pairingToken,
+  match_id: match._id,
+  point_winner: winner,
+  shot_type: normalizedType,
+  isWinner: normalizedType === "winner" || normalizedType === "ace",
+  timestamp: new Date(),
+  score_at_point: JSON.stringify(previousScore),
+});
 
     flushQueue();
 
@@ -250,7 +253,7 @@ async function handleUndo() {
   const last = historyRef.current.pop();
   if (!last) return;
 
-  // 🔥 restore instant UI
+  // 🔥 restore UI instant
   const optimistic = {
     ...last.matchSnapshot,
     updatedAt: new Date().toISOString(),
@@ -259,22 +262,29 @@ async function handleUndo() {
   lastUpdateRef.current = Date.now();
   setMatch(optimistic);
 
-  // 🔥 remove last point from queue if still pending
-  if (queueRef.current.length > 0) {
-    queueRef.current.pop();
+  // 🔥 enlever de la queue si pas encore envoyé
+  const index = queueRef.current.findIndex(
+    (p) => p.client_id === last.client_id
+  );
+
+  if (index !== -1) {
+    queueRef.current.splice(index, 1);
   } else {
-    // 🔥 sinon delete en DB
+    // 🔥 sinon soft delete en DB
     try {
-      const res = await fetch(`/api/points?match_id=${match._id}`);
+      const res = await fetch(
+        `/api/points?match_id=${match._id}`
+      );
       const points = await res.json();
 
       if (points.length) {
-        points.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
+        const lastPoint = points[0];
 
-        await fetch(`/api/points/${points[0]._id}`, {
-          method: "DELETE",
+        await fetch(`/api/points/${lastPoint._id}`, {
+          method: "PATCH", // 🔥 soft delete
+          headers: {
+            "Content-Type": "application/json",
+          },
         });
       }
     } catch (e) {

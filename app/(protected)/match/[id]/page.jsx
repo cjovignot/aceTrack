@@ -73,7 +73,8 @@ export default function MatchDetailPage() {
   }
 
 // ---------------- STATS ----------------
-const normalizedPoints = points.map(normalizePoint);
+const cleanPoints = points.filter((p) => !p.is_deleted);
+const normalizedPoints = cleanPoints.map(normalizePoint);
 
 // points gagnés par chaque joueur
 const playerPoints = normalizedPoints.filter(

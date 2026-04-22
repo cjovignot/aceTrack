@@ -22,6 +22,7 @@ const schema = new mongoose.Schema(
       enum: ["ace", "winner", "unforced_error", "double_fault"],
       required: true,
     },
+    client_id: String, // 🔥 IMPORTANT (sync queue)
 
     shot_direction: String,
 
@@ -31,6 +32,7 @@ const schema = new mongoose.Schema(
     score_at_point: String,
     timestamp: String,
   },
+      is_deleted: { type: Boolean, default: false }, // 🔥 FIX
   { timestamps: true },
 );
 
