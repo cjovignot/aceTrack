@@ -307,32 +307,38 @@ function StatBar({ label, playerValue, opponentValue }) {
         <span>{opponentValue}</span>
       </div>
 
-      {/* BARRE CENTRÉE FIXE */}
-      <div className="relative h-3 overflow-hidden bg-gray-200 rounded-full">
-        {/* axe 0 toujours au centre */}
-        <div className="absolute top-0 bottom-0 w-px left-1/2 bg-black/40" />
+      <div className="flex items-center gap-3">
+        {/* PLAYER % */}
+        <span className="text-xs font-bold text-green-600">
+          {playerPct.toFixed(0)} %
+        </span>
 
-        {/* PLAYER (gauche) */}
-        <div
-          className="absolute top-0 h-full bg-green-600 right-1/2"
-          style={{
-            width: `${playerPct}%`,
-          }}
-        />
+        {/* BARRE */}
+        <div className="relative flex-1 h-3 overflow-hidden bg-gray-200 rounded-full">
+          {/* axe central */}
+          <div className="absolute top-0 bottom-0 w-px left-1/2 bg-black/40" />
 
-        {/* OPPONENT (droite) */}
-        <div
-          className="absolute top-0 h-full bg-orange-400 left-1/2"
-          style={{
-            width: `${opponentPct}%`,
-          }}
-        />
-      </div>
+          {/* PLAYER (gauche) */}
+          <div
+            className="absolute top-0 h-full bg-green-600 right-1/2"
+            style={{
+              width: `${playerPct / 2}%`,
+            }}
+          />
 
-      <div className="flex justify-between text-xs font-bold">
-        <span className="text-green-600">{playerPct.toFixed(0)} %</span>
+          {/* OPPONENT (droite) */}
+          <div
+            className="absolute top-0 h-full bg-orange-400 left-1/2"
+            style={{
+              width: `${opponentPct / 2}%`,
+            }}
+          />
+        </div>
 
-        <span className="text-orange-400">{opponentPct.toFixed(0)} %</span>
+        {/* OPPONENT % */}
+        <span className="text-xs font-bold text-orange-400">
+          {opponentPct.toFixed(0)} %
+        </span>
       </div>
     </div>
   );
