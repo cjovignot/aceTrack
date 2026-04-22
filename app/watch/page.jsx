@@ -157,34 +157,33 @@ export default function WatchPage() {
   }
 
   // ---------- QUEUE ----------
-  function flushQueue() {
-    if (sendingRef.current || queueRef.current.length === 0) return;
+async function flushQueue() {
+  if (sendingRef.current) return;
+  if (queueRef.current.length === 0) return;
 
-    sendingRef.current = true;
+  sendingRef.current = true;
 
-    const batch = [...queueRef.current];
-    queueRef.current = [];
+  const item = queueRef.current.shift();
 
-    const promises = batch.map((item) =>
-      fetch("/api/points", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-        body: JSON.stringify(item),
-      }),
-    );
-
-    Promise.all(promises)
-      .catch(() => {
-        queueRef.current.unshift(...batch);
-      })
-      .finally(() => {
-        sendingRef.current = false;
-        flushQueue();
-      });
+  try {
+    await fetch("/api/points", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(item),
+    });
+  } catch (e) {
+    // retry
+    queueRef.current.unshift(item);
   }
+
+  sendingRef.current = false;
+
+  // 🔁 continuer sans bloquer UI
+  setTimeout(flushQueue, 0);
+}
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "Coup droit", isWinner = true) {
@@ -240,70 +239,58 @@ export default function WatchPage() {
   }
 
   // ---------- UNDO ----------
-  async function handleUndo() {
+async function handleUndo() {
   if (undoLockRef.current) return;
 
   undoLockRef.current = true;
-  setTimeout(() => (undoLockRef.current = false), 300);
+  setTimeout(() => (undoLockRef.current = false), 200);
 
   if (!match) return;
 
-  // 🔥 empêcher les points en attente
-  queueRef.current = [];
-  sendingRef.current = false;
+  const last = historyRef.current.pop();
+  if (!last) return;
 
-  // 🔥 récupérer dernier point depuis DB (tri sécurisé)
-  const res = await fetch(`/api/points?match_id=${match._id}`, {
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-  });
-
-  const points = await res.json();
-  if (!points.length) return;
-
-  points.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const lastPoint = points[0];
-
-  if (!lastPoint.score_at_point) return;
-
-  const previousScore = JSON.parse(lastPoint.score_at_point);
-
-  // 🔥 update UI immédiat
+  // 🔥 restore instant UI
   const optimistic = {
-    ...match,
-    score: previousScore,
-    status: "En cours",
-    winner: null,
+    ...last.matchSnapshot,
     updatedAt: new Date().toISOString(),
   };
 
   lastUpdateRef.current = Date.now();
   setMatch(optimistic);
 
-  try {
-    // 🔥 update match
-    await fetch(`/api/matches/${match._id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify(optimistic),
-    });
+  // 🔥 remove last point from queue if still pending
+  if (queueRef.current.length > 0) {
+    queueRef.current.pop();
+  } else {
+    // 🔥 sinon delete en DB
+    try {
+      const res = await fetch(`/api/points?match_id=${match._id}`);
+      const points = await res.json();
 
-    // 🔥 delete point
-    await fetch(`/api/points/${lastPoint._id}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-    });
-  } catch (e) {
-    console.error("Undo failed", e);
+      if (points.length) {
+        points.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        await fetch(`/api/points/${points[0]._id}`, {
+          method: "DELETE",
+        });
+      }
+    } catch (e) {
+      console.error("Undo delete failed", e);
+    }
   }
+
+  // 🔥 sync match
+  fetch(`/api/matches/${match._id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+    body: JSON.stringify(optimistic),
+  }).catch(() => {});
 }
 
   function handleServiceFault() {
