@@ -19,8 +19,6 @@ export default function MatchDetailPage() {
   function normalizePoint(p) {
     return {
       ...p,
-
-      // sécurisation des anciens formats
       shot_type: normalizeShotType(p.shot_type),
       isWinner: p.isWinner ?? p.point_winner === "player",
     };
@@ -38,6 +36,8 @@ export default function MatchDetailPage() {
 
     return type;
   }
+
+  // ---------------- FETCH ----------------
   useEffect(() => {
     Promise.all([
       api.get("/api/matches/" + id),
@@ -51,32 +51,48 @@ export default function MatchDetailPage() {
   }, [id]);
 
   async function handleDelete() {
-    // await api.delete("/api/points?match_id=" + id);
     await api.delete("/api/matches/" + id);
     router.push("/dashboard");
   }
 
-  if (loading)
+  // ---------------- LOADING ----------------
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen text-gray-400">
         Chargement...
       </div>
     );
-  if (!match)
+  }
+
+  if (!match) {
     return (
       <div className="max-w-lg px-4 py-6 mx-auto text-center text-gray-400">
         Match introuvable
       </div>
     );
+  }
 
+  // ---------------- STATS ----------------
   const normalizedPoints = points.map(normalizePoint);
-  const stats = computeStats(normalizedPoints);
+
+  const playerStats = computeStats(normalizedPoints);
+
+  const opponentStats = computeStats(
+    normalizedPoints.map((p) => ({
+      ...p,
+      point_winner: p.point_winner === "player" ? "opponent" : "player",
+    }))
+  );
 
   const winRate =
-    stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0;
+    playerStats.total > 0
+      ? Math.round((playerStats.wins / playerStats.total) * 100)
+      : 0;
 
+  // ---------------- UI ----------------
   return (
     <div className="max-w-lg px-4 py-6 mx-auto mb-20">
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => router.push("/dashboard")}
@@ -91,6 +107,8 @@ export default function MatchDetailPage() {
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
+
+      {/* CONFIRM DELETE */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="w-full max-w-sm p-6 bg-white rounded-2xl">
@@ -115,6 +133,8 @@ export default function MatchDetailPage() {
           </div>
         </div>
       )}
+
+      {/* RESULT */}
       {match.status === "Terminé" && (
         <div
           className={
@@ -133,11 +153,15 @@ export default function MatchDetailPage() {
           </p>
         </div>
       )}
+
+      {/* SCORE */}
       <ScoreBoard
         score={match.score}
         playerName={match.player_name}
         opponentName={match.opponent_name}
       />
+
+      {/* INFOS */}
       <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
         <span className="flex items-center gap-1">
           <MapPin className="w-3 h-3" />
@@ -150,49 +174,80 @@ export default function MatchDetailPage() {
           </span>
         )}
       </div>
-      {stats.total > 0 && (
-        <div className="mt-8 space-y-4">
+
+      {/* STATS */}
+      {playerStats.total > 0 && (
+        <div className="mt-8 space-y-6">
           <h2 className="text-lg font-bold">Statistiques</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <StatBox
+
+          <div className="space-y-4">
+            <StatBar
               label="Points gagnés"
-              value={stats.wins}
-              sub={"/ " + stats.total}
+              playerValue={playerStats.wins}
+              opponentValue={opponentStats.wins}
             />
 
-            <StatBox label="Taux de victoire" value={winRate + "%"} />
-
-            <StatBox label="Aces" value={stats.aces} />
-
-            <StatBox label="Doubles fautes" value={stats.doubleFaults} neg />
-
-            <StatBox label="Winners" value={stats.winners} />
-
-            <StatBox label="Fautes directes" value={stats.unforcedErrors} neg />
-
-            <StatBox label="Fautes provoquées" value={stats.forcedErrors} />
-
-            <StatBox
-              label="Coups droits gagnants"
-              value={stats.forehandWinners}
+            <StatBar
+              label="Aces"
+              playerValue={playerStats.aces}
+              opponentValue={opponentStats.aces}
             />
 
-            <StatBox label="Revers gagnants" value={stats.backhandWinners} />
+            <StatBar
+              label="Doubles fautes"
+              playerValue={playerStats.doubleFaults}
+              opponentValue={opponentStats.doubleFaults}
+            />
+
+            <StatBar
+              label="Winners"
+              playerValue={playerStats.winners}
+              opponentValue={opponentStats.winners}
+            />
+
+            <StatBar
+              label="Fautes directes"
+              playerValue={playerStats.unforcedErrors}
+              opponentValue={opponentStats.unforcedErrors}
+            />
+
+            <StatBar
+              label="Fautes provoquées"
+              playerValue={playerStats.forcedErrors}
+              opponentValue={opponentStats.forcedErrors}
+            />
+
+            <StatBar
+              label="Coup droit gagnant"
+              playerValue={playerStats.forehandWinners}
+              opponentValue={opponentStats.forehandWinners}
+            />
+
+            <StatBar
+              label="Revers gagnant"
+              playerValue={playerStats.backhandWinners}
+              opponentValue={opponentStats.backhandWinners}
+            />
           </div>
+
+          {/* WIN RATE */}
           <div className="p-5 bg-white border rounded-2xl">
             <h3 className="mb-3 text-sm font-semibold">
               Répartition des points
             </h3>
+
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-green-600">
                 {winRate}%
               </span>
+
               <div className="flex-1 h-3 overflow-hidden bg-gray-100 rounded-full">
                 <div
                   className="h-full bg-green-600 rounded-full"
                   style={{ width: winRate + "%" }}
                 />
               </div>
+
               <span className="text-sm font-bold text-gray-400">
                 {100 - winRate}%
               </span>
@@ -204,20 +259,39 @@ export default function MatchDetailPage() {
   );
 }
 
-function StatBox({ label, value, sub, neg }) {
+// ---------------- COMPONENT ----------------
+function StatBar({ label, playerValue, opponentValue }) {
+  const total = playerValue + opponentValue;
+
+  const playerPct =
+    total > 0 ? Math.round((playerValue / total) * 100) : 0;
+
+  const opponentPct =
+    total > 0 ? Math.round((opponentValue / total) * 100) : 0;
+
   return (
-    <div className="p-3 text-center bg-white border rounded-xl">
-      <p
-        className={
-          "text-2xl font-bold " + (neg ? "text-red-500" : "text-green-600")
-        }
-      >
-        {value}{" "}
-        {sub && (
-          <span className="text-sm font-normal text-gray-400">{sub}</span>
-        )}
-      </p>
-      <p className="mt-1 text-xs text-gray-500">{label}</p>
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs text-gray-500">
+        <span>{playerValue}</span>
+        <span>{label}</span>
+        <span>{opponentValue}</span>
+      </div>
+
+      <div className="flex h-3 overflow-hidden rounded-full bg-gray-200">
+        <div
+          className="bg-green-600"
+          style={{ width: playerPct + "%" }}
+        />
+        <div
+          className="bg-gray-400"
+          style={{ width: opponentPct + "%" }}
+        />
+      </div>
+
+      <div className="flex justify-between text-xs font-bold">
+        <span className="text-green-600">{playerPct}%</span>
+        <span className="text-gray-400">{opponentPct}%</span>
+      </div>
     </div>
   );
 }
