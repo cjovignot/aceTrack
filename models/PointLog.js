@@ -31,10 +31,9 @@ const schema = new mongoose.Schema(
 
     score_at_point: String,
     timestamp: String,
+    is_deleted: { type: Boolean, default: false }, // 🔥 FIX
   },
-      is_deleted: { type: Boolean, default: false }, // 🔥 FIX
   { timestamps: true },
 );
 
-export default mongoose.models.PointLog ||
-  mongoose.model("PointLog", schema);
+export default mongoose.models.PointLog || mongoose.model("PointLog", schema);

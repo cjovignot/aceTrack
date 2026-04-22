@@ -68,13 +68,9 @@ export async function DELETE(request, context) {
 }
 
 export async function PATCH(req, { params }) {
-
   await PointLog.findByIdAndUpdate(params.id, {
-
     is_deleted: true,
-
   });
 
   return Response.json({ success: true });
-
 }
