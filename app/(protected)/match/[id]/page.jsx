@@ -72,22 +72,29 @@ export default function MatchDetailPage() {
     );
   }
 
-  // ---------------- STATS ----------------
-  const normalizedPoints = points.map(normalizePoint);
+// ---------------- STATS ----------------
+const normalizedPoints = points.map(normalizePoint);
 
-  const playerStats = computeStats(normalizedPoints);
+// points gagnés par chaque joueur
+const playerPoints = normalizedPoints.filter(
+  (p) => p.point_winner === "player"
+);
 
-  const opponentStats = computeStats(
-    normalizedPoints.map((p) => ({
-      ...p,
-      point_winner: p.point_winner === "player" ? "opponent" : "player",
-    }))
-  );
+const opponentPoints = normalizedPoints.filter(
+  (p) => p.point_winner === "opponent"
+);
 
-  const winRate =
-    playerStats.total > 0
-      ? Math.round((playerStats.wins / playerStats.total) * 100)
-      : 0;
+// calcul stats séparées
+const playerStats = computeStats(playerPoints);
+const opponentStats = computeStats(opponentPoints);
+
+// winrate basé sur TOUS les points
+const totalPoints = normalizedPoints.length;
+
+const winRate =
+  totalPoints > 0
+    ? Math.round((playerStats.wins / totalPoints) * 100)
+    : 0;
 
   // ---------------- UI ----------------
   return (
