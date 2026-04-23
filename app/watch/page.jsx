@@ -20,8 +20,8 @@ function normalizeShotType(type) {
   const t = type.toLowerCase();
 
   if (t.includes("ace")) return "ace";
-  if (t.includes("double")) return "double_fault";
-  if (t.includes("faute")) return "unforced_error";
+  if (t.includes("double_fault")) return "double_fault";
+  if (t.includes("unforced_error")) return "unforced_error";
   if (t.includes("coup") || t.includes("winner")) return "winner";
 
   return "winner";

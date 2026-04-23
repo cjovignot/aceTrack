@@ -12,8 +12,6 @@ export async function getAuthorizedMatch(request, match_id) {
 
   const token = request.headers.get("x-pairing-token");
 
-  console.log(11111, token);
-
   // 🔥 1. PRIORITY: DEVICE / WATCH (Redis)
   if (token) {
     const pairingRaw = await redis.get(`pairing:${token}`);
@@ -65,10 +63,10 @@ export async function GET(request) {
     );
   }
 
-const points = await PointLog.find({
-  match_id,
-  is_deleted: { $ne: true },
-}).sort({ createdAt: -1 });
+  const points = await PointLog.find({
+    match_id,
+    is_deleted: { $ne: true },
+  }).sort({ createdAt: -1 });
 
   return NextResponse.json(points);
 }
