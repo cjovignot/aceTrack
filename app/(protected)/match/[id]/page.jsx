@@ -208,7 +208,7 @@ export default function MatchDetailPage() {
 
         <div className="px-4 space-y-4">
           <StatBar
-            label="Points gagnés"
+            label="Coups gagnants"
             playerValue={mergedPlayerStats.winners}
             opponentValue={mergedOpponentStats.winners}
           />

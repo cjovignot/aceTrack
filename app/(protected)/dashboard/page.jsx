@@ -22,7 +22,7 @@ export default function DashboardPage() {
     matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0;
 
   return (
-    <div className="max-w-2xl mb-20 px-4 py-6 mx-auto">
+    <div className="max-w-2xl px-4 py-6 mx-auto mb-20">
       {/* <h1 className="mb-1 text-2xl font-bold text-white">
         Bonjour, {user?.name} 🎾
       </h1> */}
@@ -70,21 +70,22 @@ export default function DashboardPage() {
               className="flex items-center justify-between p-4 transition rounded-2xl bg-gray-900/30 hover:bg-gray-900/70"
             >
               <div className="w-full">
-                <p className="mb-1 text-sm text-cyan-300/70">
+                <p className="mb-1 text-sm text-cyan-300/80">
                   {m.player_name} vs {m.opponent_name}
                 </p>
                 <div className="flex items-baseline justify-between gap-1 text-sm">
                   <div className="flex gap-2">
-                    <p className="text-gray-300/40">{m.surface}</p>
-                    {/* ·{" "} */}
+                    <p className="text-gray-300/60">{m.surface}</p>·{" "}
+                    <p className="text-sm text-red-800">{m.status}</p>
                   </div>
-                  <p className="text-sm text-red-900">{m.status}</p>
                 </div>
               </div>
 
-              {m.winner === "player" && (
-                <Trophy className="w-5 h-5 text-yellow-500" />
-              )}
+              <div className="flex items-center justify-center pr-1">
+                {m.winner === "player" && (
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                )}
+              </div>
             </Link>
           ))}
         </div>

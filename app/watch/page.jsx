@@ -1,43 +1,160 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import api from "@/lib/api";
-import { addPoint, getScoreDisplay } from "@/lib/tennisScoring";
-import ScoreBoard from "@/components/ScoreBoard";
-import { ArrowLeft, Timer, Undo2, StopCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { addPoint } from "@/lib/tennisScoring";
 
-export default function LiveScorePage() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const matchId = params.get("matchId");
+// ---------- Utils ----------
+function gameScoreToNum(s) {
+  if (!s || s === "0") return 0;
+  if (s === "15") return 1;
+  if (s === "30") return 2;
+  if (s === "40") return 3;
+  if (s === "AD") return 4;
+  return parseInt(s) || 0;
+}
 
-  const [loading, setLoading] = useState(true);
-  const [match, setMatch] = useState(null);
-  const [elapsed, setElapsed] = useState(0);
+function normalizeShotType(type) {
+  if (!type) return "winner";
 
-  const timer = useRef(null);
+  const t = type.toLowerCase();
 
-  // 🔥 NEW
+  if (t.includes("ace")) return "ace";
+  if (t.includes("double_fault")) return "double_fault";
+  if (t.includes("unforced_error")) return "unforced_error";
+  if (t.includes("coup") || t.includes("winner")) return "winner";
+
+  return "winner";
+}
+
+function getServeSide(score) {
+  if (!score) return "deuce";
+  const p = gameScoreToNum(score.current_game_player);
+  const o = gameScoreToNum(score.current_game_opponent);
+  return (p + o) % 2 === 0 ? "deuce" : "ad";
+}
+
+export default function WatchPage() {
+  const searchParams = useSearchParams();
+
+  const lastUpdateRef = useRef(0);
   const historyRef = useRef([]);
+  const undoLockRef = useRef(false);
+
+  const [match, setMatch] = useState(null);
+  const [matchId, setMatchId] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const [serviceFaults, setServiceFaults] = useState(0);
+  const [lastPoint, setLastPoint] = useState(null);
+
+  const [pairingToken, setPairingToken] = useState(null);
+
+  const hasStarted = useRef(false);
+  const pairingIntervalRef = useRef(null);
+  const matchIntervalRef = useRef(null);
+
+  // queue
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
+  // ---------- INIT ----------
   useEffect(() => {
-    const load = matchId
-      ? api.get("/api/matches/" + matchId)
-      : api
-          .get("/api/matches?status=En%20cours&limit=1")
-          .then((r) => ({ data: r.data[0] }));
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+    createPairing();
+  }, []);
 
-    load.then((r) => {
-      setMatch(r.data || null);
-      setLoading(false);
+  // ---------- LOAD MATCH ----------
+  useEffect(() => {
+    if (!matchId) return;
+
+    async function loadMatch() {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMatch(data);
+        startMatchPolling(data._id);
+      }
+    }
+
+    loadMatch();
+  }, [matchId]);
+
+  // ---------- PAIRING ----------
+  async function createPairing() {
+    if (pairingToken) return;
+
+    const res = await fetch("/api/pairing/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
     });
 
-    timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    if (!res.ok) return;
 
-    return () => clearInterval(timer.current);
-  }, [matchId]);
+    const data = await res.json();
+    if (!data.token) return;
+
+    setPairingToken(data.token);
+    startPairingPolling(data.token);
+  }
+
+  function startPairingPolling(token) {
+    if (pairingIntervalRef.current) return;
+
+    pairingIntervalRef.current = setInterval(async () => {
+      const res = await fetch(`/api/pairing/${token}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      if (data.connected && data.match_id) {
+        setIsConnected(true);
+        setMatchId(data.match_id);
+
+        clearInterval(pairingIntervalRef.current);
+        pairingIntervalRef.current = null;
+      }
+    }, 1500);
+  }
+
+  function startMatchPolling(id) {
+    if (matchIntervalRef.current) return;
+
+    matchIntervalRef.current = setInterval(async () => {
+      const res = await fetch(`/api/matches/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+      });
+
+      if (!res.ok) return;
+
+      const updated = await res.json();
+
+      const serverTime = new Date(updated.updatedAt || 0).getTime();
+
+      if (serverTime < lastUpdateRef.current) return;
+
+      setMatch(updated);
+    }, 3000);
+  }
 
   // ---------- QUEUE ----------
   async function flushQueue() {
@@ -49,77 +166,105 @@ export default function LiveScorePage() {
     const item = queueRef.current.shift();
 
     try {
-      await api.post("/api/points", item);
+      await fetch("/api/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify(item),
+      });
     } catch (e) {
+      // retry
       queueRef.current.unshift(item);
     }
 
     sendingRef.current = false;
 
+    // 🔁 continuer sans bloquer UI
     setTimeout(flushQueue, 0);
   }
 
   // ---------- SCORE ----------
-  function scorePoint(winner) {
+  function scorePoint(winner, shotType = "winner", isWinner = true) {
     if (!match) return;
+
+    setServiceFaults(0);
 
     const previousScore = JSON.parse(JSON.stringify(match.score));
     const result = addPoint(match.score, winner);
 
+    // ✅ créer AVANT usage
     const clientId = Date.now() + "_" + Math.random();
 
-    // 🔥 history (clé undo)
+    // ✅ stocker dans history (clé pour undo fiable)
     historyRef.current.push({
       matchSnapshot: JSON.parse(JSON.stringify(match)),
       client_id: clientId,
     });
 
-    // 🔥 optimistic UI
-    const optimistic = {
+    const optimisticUpdate = {
       ...match,
       score: result.score,
+      updatedAt: new Date().toISOString(),
       ...(result.matchWon
-        ? {
-            status: "Terminé",
-            winner: result.matchWinner,
-            duration_minutes: Math.round(elapsed / 60),
-          }
+        ? { status: "Terminé", winner: result.matchWinner }
         : {}),
     };
 
-    setMatch(optimistic);
+    lastUpdateRef.current = Date.now();
+    setMatch(optimisticUpdate);
 
-    if (result.matchWon) {
-      clearInterval(timer.current);
-    }
+    const normalizedType = normalizeShotType(shotType);
 
-    // 🔥 queue point
     queueRef.current.push({
-      client_id: clientId,
+      client_id: clientId, // 🔥 cohérent avec history
+      pairingToken,
       match_id: match._id,
       point_winner: winner,
-      shot_type: "Coup droit",
+      shot_type: normalizedType,
+      isWinner: normalizedType === "winner" || normalizedType === "ace",
       timestamp: new Date(),
       score_at_point: JSON.stringify(previousScore),
     });
 
     flushQueue();
 
-    // 🔥 sync match (non bloquant)
-    api.patch("/api/matches/" + match._id, optimistic).catch(() => {});
+    fetch(`/api/matches/${match._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(optimisticUpdate),
+    }).catch(() => {});
+
+    setLastPoint(winner);
+    setTimeout(() => setLastPoint(null), 150);
   }
 
   // ---------- UNDO ----------
   async function handleUndo() {
+    if (undoLockRef.current) return;
+
+    undoLockRef.current = true;
+    setTimeout(() => (undoLockRef.current = false), 200);
+
     if (!match) return;
 
     const last = historyRef.current.pop();
     if (!last) return;
 
-    // 🔥 restore instant UI
-    setMatch({ ...last.matchSnapshot });
+    // 🔥 restore UI instant
+    const optimistic = {
+      ...last.matchSnapshot,
+      updatedAt: new Date().toISOString(),
+    };
 
-    // 🔥 remove from queue if pending
+    lastUpdateRef.current = Date.now();
+    setMatch(optimistic);
+
+    // 🔥 enlever de la queue si pas encore envoyée
     const index = queueRef.current.findIndex(
       (p) => p.client_id === last.client_id,
     );
@@ -128,135 +273,231 @@ export default function LiveScorePage() {
       queueRef.current.splice(index, 1);
     } else {
       try {
-        const { data: points } = await api.get(
-          "/api/points?match_id=" + match._id,
-        );
+        // ✅ AUTH OBLIGATOIRE (watch + mobile)
+        const res = await fetch(`/api/points?match_id=${match._id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            "x-pairing-token": pairingToken,
+          },
+        });
 
-        if (points.length) {
-          await api.delete("/api/points/" + points[0]._id);
-        }
+        const points = await res.json();
+
+        if (!Array.isArray(points) || points.length === 0) return;
+
+        // 🔥 sécurise : ignore déjà supprimés
+        const validPoints = points
+          .filter((p) => !p.is_deleted)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const lastPoint = validPoints[0];
+
+        if (!lastPoint) return;
+
+        // 🔥 soft delete (stats-friendly)
+        await fetch(`/api/points/${lastPoint._id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pairing-token": pairingToken,
+          },
+          body: JSON.stringify({
+            is_deleted: true,
+          }),
+        });
       } catch (e) {
-        console.error("Undo failed", e);
+        console.error("Undo delete failed", e);
       }
     }
 
     // 🔥 sync match
-    api.patch("/api/matches/" + match._id, last.matchSnapshot).catch(() => {});
+    fetch(`/api/matches/${match._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(optimistic),
+    }).catch(() => {});
   }
 
-  async function handleEndMatch() {
-    if (!match) return;
-
-    await api.patch("/api/matches/" + match._id, {
-      status: "Terminé",
-      duration_minutes: Math.round(elapsed / 60),
-    });
-
-    clearInterval(timer.current);
-    router.push("/match/" + match._id);
+  function handleServiceFault() {
+    if (serviceFaults === 0) {
+      setServiceFaults(1);
+    } else {
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
+      scorePoint(receiver, "double_fault", false);
+    }
   }
 
-  const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  // ---------- DERIVED ----------
+  const score = match?.score || {};
+  const setsP = score.sets_player || [];
+  const setsO = score.sets_opponent || [];
+  const serving = score.serving;
+  const serveSide = getServeSide(score);
+  const isFinished = match?.status === "Terminé";
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Chargement du match...
-      </div>
-    );
-  }
-
-  if (!match) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
-        <p className="mb-4 text-gray-400">
-          Créer un match pour saisir les points depuis votre appareil
-        </p>
-        <button
-          onClick={() => router.push("/new-match")}
-          className="px-6 py-3 font-semibold transition border text-cyan-300/70 hover:bg-cyan-300/70 border-cyan-300/40 rounded-xl hover:bg-green-700 hover:text-white bg-gray-950"
-        >
-          Créer un match
-        </button>
-      </div>
-    );
-  }
+  const cellBtn = (bg, active = false) => ({
+    background: active ? "#facc15" : bg,
+    color: active ? "#000" : "#fff",
+    border: "none",
+    borderRadius: 6,
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    userSelect: "none",
+  });
 
   return (
-    <div className="max-w-lg px-4 py-6 mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="text-gray-400 hover:text-gray-600"
+    <div
+      style={{
+        background: "#000",
+        color: "#fff",
+        position: "fixed",
+        inset: 0,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gridTemplateRows: "1fr 1fr 1fr 1fr",
+        gap: 3,
+        padding: 3,
+      }}
+    >
+      {!isConnected && pairingToken && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "end",
+            gap: 10,
+          }}
+          className="p-2 pb-5 w-fit"
         >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-
-        <span className="flex items-center gap-1 font-mono text-sm text-gray-500">
-          <Timer className="w-4 h-4" /> {fmt(elapsed)}
-        </span>
-
-        <button
-          onClick={handleUndo}
-          disabled={historyRef.current.length === 0}
-          className="text-gray-400 hover:text-gray-600 disabled:opacity-30"
-        >
-          <Undo2 className="w-5 h-5" />
-        </button>
-      </div>
-
-      <ScoreBoard
-        score={match.score}
-        playerName={match.player_name}
-        opponentName={match.opponent_name}
-      />
-
-      {match.status !== "Terminé" && (
-        <>
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            <button
-              onClick={() => scorePoint("player")}
-              className="h-24 text-lg font-bold text-white transition bg-green-600 hover:bg-green-700 rounded-2xl active:scale-95"
-            >
-              ✓ {(match.player_name || "Moi").split(" ")[0]}
-            </button>
-
-            <button
-              onClick={() => scorePoint("opponent")}
-              className="h-24 text-lg font-bold text-white transition bg-gray-800 hover:bg-gray-700 rounded-2xl active:scale-95"
-            >
-              ✗ {(match.opponent_name || "Adv").split(" ")[0]}
-            </button>
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={handleEndMatch}
-              className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600"
-            >
-              <StopCircle className="w-4 h-4" /> Terminer le match
-            </button>
-          </div>
-        </>
-      )}
-
-      {match.status === "Terminé" && (
-        <div className="py-8 mt-8 text-center border border-green-200 bg-green-50 rounded-2xl">
-          <div className="mb-2 text-4xl">🏆</div>
-          <p className="text-xl font-bold">
-            {match.winner === "player" ? "Victoire !" : "Défaite"}
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            {getScoreDisplay(match.score)}
-          </p>
-          <button
-            onClick={() => router.push("/match/" + match._id)}
-            className="px-6 py-2 mt-4 font-semibold text-white transition bg-green-600 rounded-xl hover:bg-green-700"
+          <p
+            className="flex text-center w-fit"
+            style={{ color: "#4ade80", fontSize: 14 }}
           >
-            Voir les statistiques
-          </button>
+            Scannez depuis votre l'app pour connecter votre montre
+          </p>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+              `${window.location.origin}/connect?token=${pairingToken}`,
+            )}`}
+            width={210}
+          />
         </div>
       )}
+
+      <button
+        onClick={() => scorePoint("player", "unforced_error", false)}
+        style={cellBtn("#4a1515")}
+      >
+        Faute
+      </button>
+      <button
+        onClick={() => scorePoint("opponent", "winner", true)}
+        style={cellBtn("#1e3a5f")}
+      >
+        Gagnant
+      </button>
+      <div />
+
+      <div
+        style={{
+          gridColumn: "1 / 3",
+          gridRow: "2 / 4",
+          background: "#0a0a0a",
+          borderRadius: 6,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          position: "relative",
+          gap: 4,
+        }}
+      >
+        {/* Serve indicator */}
+        <div
+          style={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#facc15",
+            ...(serving === "player"
+              ? serveSide === "deuce"
+                ? { bottom: 5, right: 5 }
+                : { bottom: 5, left: 5 }
+              : serveSide === "deuce"
+                ? { top: 5, left: 5 }
+                : { top: 5, right: 5 }),
+          }}
+        />
+
+        {/* Opponent */}
+        <div style={{ fontSize: 22 }}>
+          {setsO.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_opponent || "0"}
+          </span>
+        </div>
+
+        <div style={{ width: "70%", height: 1, background: "#222" }} />
+
+        {/* Player */}
+        <div style={{ fontSize: 22 }}>
+          {setsP.map((s, i) => (
+            <span key={i} style={{ margin: 4 }}>
+              {s}
+            </span>
+          ))}
+          <span style={{ color: "#facc15", fontSize: 28 }}>
+            {score.current_game_player || "0"}
+          </span>
+        </div>
+      </div>
+
+      <button onClick={handleServiceFault} style={cellBtn("#2d1a00")}>
+        Service
+      </button>
+      <button
+        onClick={() => scorePoint(serving, "ace", true)}
+        style={cellBtn("#1a1a2e")}
+      >
+        Ace
+      </button>
+
+      <button
+        onClick={() => scorePoint("opponent", "unforced_error", false)}
+        style={cellBtn("#4a1515")}
+      >
+        Faute
+      </button>
+      <button
+        onClick={() => scorePoint("player", "winner", true)}
+        style={cellBtn("#14532d")}
+      >
+        Gagnant
+      </button>
+      <button onClick={handleUndo} style={cellBtn("#111")}>
+        ↩
+      </button>
+
+      {isFinished && <div>Fin</div>}
     </div>
   );
 }
