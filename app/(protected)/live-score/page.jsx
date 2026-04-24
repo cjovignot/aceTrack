@@ -8,7 +8,8 @@ import {
   getServer,
 } from "../../../lib/tennisScoring";
 import ScoreBoard from "../../../components/ScoreBoard";
-import { ArrowLeft, Timer, Undo2 } from "lucide-react";
+import { ArrowLeft, Timer, Undo2, Trophy, X } from "lucide-react";
+import { div } from "framer-motion/client";
 
 export default function LiveScorePage() {
   const router = useRouter();
@@ -38,33 +39,33 @@ export default function LiveScorePage() {
     return `bg-transparent border ${buttonStyles[color]} h-18 text-sm rounded-md font-semibold`;
   }
 
-function getPointContext(score) {
-  if (!score) return "normal";
+  function getPointContext(score) {
+    if (!score) return "normal";
 
-  const p = score.current_game_player;
-  const o = score.current_game_opponent;
+    const p = score.current_game_player;
+    const o = score.current_game_opponent;
 
-  const { server } = getServer(score);
-  const isOpponentServing = server === "opponent";
+    const { server } = getServer(score);
+    const isOpponentServing = server === "opponent";
 
-  // Deuce
-  if (p === "40" && o === "40") return "deuce";
+    // Deuce
+    if (p === "40" && o === "40") return "deuce";
 
-  // Advantage
-  if (p === "AD" || o === "AD") return "advantage";
+    // Advantage
+    if (p === "AD" || o === "AD") return "advantage";
 
-  // Break point (le receveur peut gagner le jeu)
-  if (isOpponentServing && p === "40" && o !== "40") {
-    return "break_point";
+    // Break point (le receveur peut gagner le jeu)
+    if (isOpponentServing && p === "40" && o !== "40") {
+      return "break_point";
+    }
+
+    // Game point (le serveur peut gagner le jeu)
+    if (!isOpponentServing && p === "40" && o !== "40") {
+      return "game_point";
+    }
+
+    return "normal";
   }
-
-  // Game point (le serveur peut gagner le jeu)
-if (!isOpponentServing && p === "40" && o !== "40") {
-    return "game_point";
-  }
-
-  return "normal";
-}
 
   const pointContext = getPointContext(match?.score);
 
@@ -114,7 +115,6 @@ if (!isOpponentServing && p === "40" && o !== "40") {
     setTimeout(flushQueue, 0);
   }
 
-
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
     if (!match || !match.score) return;
@@ -137,7 +137,7 @@ if (!isOpponentServing && p === "40" && o !== "40") {
     const optimistic = {
       ...match,
       score: scoreCopy,
-serving: newServer.server,
+      serving: newServer.server,
       ...(result.matchWon
         ? {
             status: "Terminé",
@@ -175,8 +175,8 @@ serving: newServer.server,
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-const { server } = getServer(match.score);
-const receiver = server === "player" ? "opponent" : "player";
+      const { server } = getServer(match.score);
+      const receiver = server === "player" ? "opponent" : "player";
 
       scorePoint(receiver, "double_fault", false);
       setServiceFaults(0);
@@ -427,7 +427,7 @@ const receiver = server === "player" ? "opponent" : "player";
           </button>
 
           <button
-onClick={() => scorePoint(server, "ace", true)}
+            onClick={() => scorePoint(server, "ace", true)}
             className={defineButtonStyle("purple")}
           >
             Ace
@@ -437,11 +437,22 @@ onClick={() => scorePoint(server, "ace", true)}
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <p className="mb-2 text-sm text-gray-400">Match terminé</p>
 
-          <p className="text-2xl font-bold text-yellow-400">
-            {match.winner === "player"
-              ? formatPlayerName(match.player_name)
-              : formatPlayerName(match.opponent_name)}
-          </p>
+          <div className="flex gap-2">
+            {match.winner === "player" ? (
+              <>
+                <Trophy className="text-yellow-400" />{" "}
+              </>
+            ) : (
+              <>
+                <X className="text-red-700" />
+              </>
+            )}
+            <p className="text-2xl font-bold text-yellow-400">
+              {match.winner === "player"
+                ? formatPlayerName(match.player_name)
+                : formatPlayerName(match.opponent_name)}
+            </p>
+          </div>
         </div>
       )}
     </div>
