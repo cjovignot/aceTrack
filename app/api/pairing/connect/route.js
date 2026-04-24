@@ -20,9 +20,9 @@ export async function POST(req) {
 
   await redis.set(`pairing:${token}`, JSON.stringify(updated), { ex: 600 });
 
-  console.log("PAIRING CONNECT:", { token, match_id });
-  console.log("PAIRING BEFORE:", pairing);
-  console.log("PAIRING AFTER:", updated);
+  // console.log("PAIRING CONNECT:", { token, match_id });
+  // console.log("PAIRING BEFORE:", pairing);
+  // console.log("PAIRING AFTER:", updated);
 
   return Response.json({ success: true });
 }
