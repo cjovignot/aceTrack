@@ -85,7 +85,7 @@ export default function NewMatchPage() {
       date: new Date().toISOString(),
     });
     // router.push('/live-score?matchId=' + res.data._id);
-    router.push("/watch-connect");
+    router.push("/live-score");
   }
 
   const playerLabel =

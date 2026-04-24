@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "../../../../lib/api";
 import { computeStats } from "../../../../lib/stats";
 import ScoreBoard from "../../../../components/ScoreBoard";
-import { ArrowLeft, Trophy, Clock, Trash2 } from "lucide-react";
+import { ArrowLeft, Trophy, Clock, Trash2, X } from "lucide-react";
 
 export default function MatchDetailPage() {
   const { id } = useParams();
@@ -164,21 +164,20 @@ export default function MatchDetailPage() {
 
       {/* RESULT */}
       {match.status === "Terminé" && (
-        <div
-          className={
-            "text-center mb-6 py-4 rounded-2xl " +
-            (match.winner === "player" ? "bg-green-50" : "bg-gray-100")
-          }
-        >
-          <Trophy
-            className={
-              "w-6 h-6 mx-auto mb-1 " +
-              (match.winner === "player" ? "text-yellow-500" : "text-gray-400")
-            }
-          />
-          <p className="text-lg font-bold">
-            {match.winner === "player" ? "Victoire" : "Défaite"}
-          </p>
+        <div className={"text-center mb-6 py-4 rounded-2xl bg-transparent"}>
+          {match.winner === "player" ? (
+            <>
+              <Trophy className={"w-6 h-6 mx-auto mb-1 text-yellow-500"} />
+              <p className={`text-lg font-semibold text-yellow-500`}>
+                Victoire
+              </p>
+            </>
+          ) : (
+            <>
+              <X className={"w-6 h-6 mx-auto mb-1 text-red-800"} />
+              <p className={`text-lg font-semibold text-red-800`}>Défaite</p>
+            </>
+          )}
         </div>
       )}
 

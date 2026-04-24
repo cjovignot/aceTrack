@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import api from "../../../lib/api";
 import { addPoint, getScoreDisplay } from "../../../lib/tennisScoring";
 import ScoreBoard from "../../../components/ScoreBoard";
-import { ArrowLeft, Timer, Undo2, StopCircle } from "lucide-react";
+import { ArrowLeft, Timer, Undo2 } from "lucide-react";
 
 export default function LiveScorePage() {
   const router = useRouter();
@@ -18,10 +18,46 @@ export default function LiveScorePage() {
 
   const timer = useRef(null);
 
-  // 🔥 core logic
   const historyRef = useRef([]);
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
+
+  const buttonStyles = {
+    red: "border-red-700 text-red-700 hover:bg-red-700/20",
+    green: "border-green-700 text-green-700 hover:bg-green-700/20",
+    orange: "border-orange-400 text-orange-400 hover:bg-orange-600/20",
+    purple: "border-purple-400 text-purple-400 hover:bg-purple-700/20",
+    gray: "border-gray-300 text-gray-300 hover:bg-gray-300/20",
+  };
+
+  function defineButtonStyle(color) {
+    return `bg-transparent border ${buttonStyles[color]} h-18 text-sm rounded-md font-semibold`;
+  }
+
+  function getPointContext(score) {
+    if (!score) return "normal";
+
+    const p = score.current_game_player;
+    const o = score.current_game_opponent;
+
+    // Deuce
+    if (p === "40" && o === "40") return "deuce";
+
+    // Advantage
+    if (p === "AD" || o === "AD") return "advantage";
+
+    // Break points (opponent service + player mène au score)
+    const isOpponentServing = score.serving === "opponent";
+
+    if (isOpponentServing && p === "40" && o !== "40") return "break_point";
+
+    // Game point
+    if (!isOpponentServing && o === "40" && p !== "40") return "game_point";
+
+    return "normal";
+  }
+
+  const pointContext = getPointContext(match?.score);
 
   function getServeSide(score) {
     if (!score) return "deuce";
@@ -40,8 +76,15 @@ export default function LiveScorePage() {
     return (p + o) % 2 === 0 ? "deuce" : "ad";
   }
 
-  const serveSide = getServeSide(match.score);
-  const serving = match.score.serving;
+  function formatPlayerName(name = "") {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].toUpperCase();
+
+    const firstNameInitial = parts[0][0]?.toUpperCase();
+    const lastName = parts.slice(1).join(" ").toUpperCase();
+
+    return `${firstNameInitial}. ${lastName}`;
+  }
 
   // ---------- INIT ----------
   useEffect(() => {
@@ -67,7 +110,6 @@ export default function LiveScorePage() {
     if (queueRef.current.length === 0) return;
 
     sendingRef.current = true;
-
     const item = queueRef.current.shift();
 
     try {
@@ -77,13 +119,12 @@ export default function LiveScorePage() {
     }
 
     sendingRef.current = false;
-
     setTimeout(flushQueue, 0);
   }
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
-    if (!match) return;
+    if (!match || !match.score) return;
 
     setServiceFaults(0);
 
@@ -132,7 +173,7 @@ export default function LiveScorePage() {
 
   // ---------- SERVICE ----------
   function handleServiceFault() {
-    if (!match) return;
+    if (!match || !match.score) return;
 
     if (serviceFaults === 0) {
       setServiceFaults(1);
@@ -191,7 +232,7 @@ export default function LiveScorePage() {
 
   const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
 
-  // ---------- UI ----------
+  // ---------- UI GUARDS ----------
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen text-gray-400">
@@ -216,176 +257,183 @@ export default function LiveScorePage() {
     );
   }
 
+  // ✅ SAFE ZONE (match existe ici)
+  const serveSide = getServeSide(match.score);
+  const serving = match.score?.serving;
+
   return (
-    <div className="max-w-lg px-4 py-6 mx-auto">
+    <div className="w-full px-6 py-5 mx-auto">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => router.push("/dashboard")}>
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <span className="flex items-center gap-1 text-sm text-gray-500">
+        <span className="flex items-center justify-center w-full gap-1 text-sm text-gray-500">
           <Timer className="w-4 h-4" /> {fmt(elapsed)}
         </span>
 
-        <button onClick={handleUndo} disabled={historyRef.current.length === 0}>
+        {/* <button onClick={handleUndo} disabled={historyRef.current.length === 0}>
           <Undo2 className="w-5 h-5" />
-        </button>
+        </button> */}
       </div>
 
-      {/* SCORE */}
-      <ScoreBoard
+      {/* <ScoreBoard
         score={match.score}
-        playerName={match.player_name}
-        opponentName={match.opponent_name}
-      />
+        playerName={formatPlayerName(match.player_name)}
+        opponentName={formatPlayerName(match.opponent_name)}
+      /> */}
 
-      {/* ACTIONS */}
       {match.status !== "Terminé" && (
-        <div className="grid grid-cols-4 grid-rows-3 gap-1 mt-6">
-          {/* 1 - Faute joueur */}
+        <div className="grid grid-cols-4 grid-rows-3 gap-1">
           <button
-            onClick={() => scorePoint("opponent", "unforced_error", false)}
-            className="text-sm font-bold text-white bg-red-700 rounded-md"
+            onClick={() => scorePoint("player", "unforced_error", false)}
+            className={defineButtonStyle("red")}
           >
             Faute
           </button>
 
-          {/* 2-3-6-7 - SCORE CENTRAL */}
-          <div className="relative flex flex-col justify-center col-span-2 row-span-2 px-2 bg-black rounded-md items-between">
-            {/* Pastille service */}
+          <div className="relative flex flex-col justify-center h-full col-span-2 row-span-2 p-3 bg-black rounded-md">
+            {/* SERVE INDICATOR */}
             <div
               className={`absolute w-2 h-2 rounded-full bg-yellow-400 ${
                 serving === "opponent"
                   ? serveSide === "deuce"
-                    ? "top-2 right-2" // joueur égalité
-                    : "bottom-2 right-2" // joueur avantage
+                    ? "top-2 left-2"
+                    : "top-2 right-2"
                   : serveSide === "deuce"
-                    ? "bottom-2 left-2" // opponent égalité
-                    : "top-2 left-2" // opponent avantage
+                    ? "bottom-2 right-2"
+                    : "bottom-2 left-2"
               }`}
             />
+            {/* PLAYER ROW */}
+            {/* OPPONENT ROW */}
+            <div className="grid items-center grid-cols-5 py-1 text-lg">
+              {/* NAME LEFT */}
 
-            {/* OPPONENT */}
-            {/* PLAYER */}
-            <div className="flex items-center justify-center gap-2 text-lg">
-              {/* sets */}
-              {(match.score.sets_player || []).map((s, i) => {
-                const opp = match.score.sets_opponent?.[i];
+              <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
+                {formatPlayerName(match.opponent_name)}
+              </span>
+              {/* SCORES */}
 
-                const isWinner = s > opp;
+              <div className="flex items-center justify-end col-span-2 gap-3">
+                {(match.score.sets_opponent || []).map((s, i) => {
+                  const player = match.score.sets_player?.[i];
+                  const isWinner = s > player;
 
-                return (
-                  <span
-                    key={i}
-                    className={`text-sm ${
-                      isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
-                    }`}
-                  >
-                    {s}
-                  </span>
-                );
-              })}
+                  return (
+                    <span
+                      key={i}
+                      className={`text-sm ${
+                        isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
+                      }`}
+                    >
+                      {s}
+                    </span>
+                  );
+                })}
+              </div>
 
-              {/* score courant */}
-              <span className="ml-2 text-lg font-bold text-yellow-400">
-                {match.score.current_game_player || "0"}
+              <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
+                {match.score.current_game_opponent || "0"}
               </span>
             </div>
 
-            {/* séparation */}
-            <div className="w-3/4 h-px my-2 bg-gray-700" />
+            {/* DIVIDER */}
+            <div className="w-full h-px my-5 bg-gray-700" />
 
-            <div className="flex items-center justify-center gap-2 text-lg">
-              {/* sets */}
-              {(match.score.sets_opponent || []).map((s, i) => {
-                const player = match.score.sets_player?.[i];
+            <div className="grid items-center grid-cols-5 py-1 text-lg">
+              {/* NAME LEFT */}
+              <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
+                {formatPlayerName(match.player_name)}
+              </span>
 
-                const isWinner = s > player;
+              {/* SCORES */}
+              <div className="flex items-center justify-end col-span-2 gap-2">
+                {(match.score.sets_player || []).map((s, i) => {
+                  const opp = match.score.sets_opponent?.[i];
+                  const isWinner = s > opp;
 
-                return (
-                  <span
-                    key={i}
-                    className={`text-sm ${
-                      isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
-                    }`}
-                  >
-                    {s}
-                  </span>
-                );
-              })}
-
-              {/* score courant */}
-              <span className="ml-2 text-lg font-bold text-yellow-400">
-                {match.score.current_game_opponent || "0"}
+                  return (
+                    <span
+                      key={i}
+                      className={`text-sm ${
+                        isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
+                      }`}
+                    >
+                      {s}
+                    </span>
+                  );
+                })}
+              </div>
+              <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
+                {match.score.current_game_player || "0"}
               </span>
             </div>
           </div>
 
-          {/* 4 - Gagnant opponent */}
-          <button
-            onClick={() => scorePoint("opponent", "winner", true)}
-            className="text-sm font-bold text-white bg-blue-700 rounded-md"
-          >
-            Gagnant
-          </button>
+          {pointContext === "deuce" ? (
+            <>
+              <button
+                onClick={() => scorePoint("opponent", "winner", true)}
+                className={defineButtonStyle("green")}
+              >
+                Avantage
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => scorePoint("opponent", "winner", true)}
+              className={defineButtonStyle("green")}
+            >
+              Gagnant
+            </button>
+          )}
 
-          {/* 5 - Gagnant joueur */}
           <button
-            onClick={() => scorePoint("player", "winner", true)}
-            className="text-sm font-bold text-white bg-green-700 rounded-md"
-          >
-            Gagnant
-          </button>
-
-          {/* 8 - Faute opponent */}
-          <button
-            onClick={() => scorePoint("player", "unforced_error", false)}
-            className="text-sm font-bold text-white bg-red-700 rounded-md"
+            onClick={() => scorePoint("opponent", "unforced_error", false)}
+            className={defineButtonStyle("red")}
           >
             Faute
           </button>
 
-          {/* 9 - Service */}
-          <button
-            onClick={handleServiceFault}
-            className="text-sm font-bold text-white bg-orange-600 rounded-md"
-          >
-            Service {serviceFaults === 1 ? "(2e)" : ""}
-          </button>
+          {pointContext === "deuce" ? (
+            <>
+              <button
+                onClick={() => scorePoint("player", "winner", true)}
+                className={defineButtonStyle("green")}
+              >
+                Avantage
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => scorePoint("player", "winner", true)}
+              className={defineButtonStyle("green")}
+            >
+              Gagnant
+            </button>
+          )}
 
-          {/* 10 - Ace */}
-          <button
-            onClick={() => scorePoint(match.score.serving, "ace", true)}
-            className="text-sm font-bold text-white bg-purple-700 rounded-md"
-          >
-            Ace
-          </button>
-
-          {/* 11-12 - Undo */}
           <button
             onClick={handleUndo}
-            className="col-span-2 text-sm font-bold text-white bg-gray-800 rounded-md"
+            className={`${defineButtonStyle("gray")} col-span-2`}
           >
             ↩ Annuler
           </button>
-        </div>
-      )}
-
-      {/* FIN */}
-      {match.status === "Terminé" && (
-        <div className="py-8 mt-8 text-center bg-green-50 rounded-2xl">
-          <div className="text-4xl">🏆</div>
-          <p className="text-xl font-bold">
-            {match.winner === "player" ? "Victoire !" : "Défaite"}
-          </p>
-          <p className="text-sm">{getScoreDisplay(match.score)}</p>
 
           <button
-            onClick={() => router.push("/match/" + match._id)}
-            className="px-6 py-2 mt-4 text-white bg-green-600 rounded-xl"
+            onClick={handleServiceFault}
+            className={defineButtonStyle("orange")}
           >
-            Voir les stats
+            {serviceFaults === 1 ? "Double Faute" : "Service"}
+          </button>
+
+          <button
+            onClick={() => scorePoint(serving, "ace", true)}
+            className={defineButtonStyle("purple")}
+          >
+            Ace
           </button>
         </div>
       )}
