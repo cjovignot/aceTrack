@@ -38,19 +38,6 @@ export default function LiveScorePage() {
     return `bg-transparent border ${buttonStyles[color]} h-18 text-sm rounded-md font-semibold`;
   }
 
-  function getPointContext(score) {
-    if (!score) return "normal";
-
-    const p = score.current_game_player;
-    const o = score.current_game_opponent;
-
-    // Deuce
-    if (p === "40" && o === "40") return "deuce";
-
-    // Advantage
-    if (p === "AD" || o === "AD") return "advantage";
-
-    // Break points (opponent service + player mène au score)
 function getPointContext(score) {
   if (!score) return "normal";
 
@@ -66,24 +53,18 @@ function getPointContext(score) {
   // Advantage
   if (p === "AD" || o === "AD") return "advantage";
 
-  // Break point
-  if (isOpponentServing && p === "40" && o !== "40")
+  // Break point (le receveur peut gagner le jeu)
+  if (isOpponentServing && p === "40" && o !== "40") {
     return "break_point";
+  }
 
-  // Game point
-  if (!isOpponentServing && o === "40" && p !== "40")
+  // Game point (le serveur peut gagner le jeu)
+if (!isOpponentServing && p === "40" && o !== "40") {
     return "game_point";
+  }
 
   return "normal";
 }
-
-    if (isOpponentServing && p === "40" && o !== "40") return "break_point";
-
-    // Game point
-    if (!isOpponentServing && o === "40" && p !== "40") return "game_point";
-
-    return "normal";
-  }
 
   const pointContext = getPointContext(match?.score);
 
@@ -194,8 +175,8 @@ serving: newServer.server,
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver =
-        getServer(match.score) === "player" ? "opponent" : "player";
+const { server } = getServer(match.score);
+const receiver = server === "player" ? "opponent" : "player";
 
       scorePoint(receiver, "double_fault", false);
       setServiceFaults(0);
