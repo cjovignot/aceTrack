@@ -116,7 +116,7 @@ export default function NewMatchPage() {
               <input
                 value={form.player_first_name}
                 onChange={(e) => set("player_first_name", e.target.value)}
-                placeholder={profile?.display_name || "Prénom"}
+                placeholder={profile?.display_name.split(" ")[0] || "Prénom"}
                 className={inp}
               />
             </Field>
@@ -124,7 +124,7 @@ export default function NewMatchPage() {
               <input
                 value={form.player_last_name}
                 onChange={(e) => set("player_last_name", e.target.value)}
-                placeholder="Nom"
+                placeholder={profile?.display_name.split(" ")[1] || "Nom"}
                 className={inp}
               />
             </Field>
