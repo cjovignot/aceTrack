@@ -51,7 +51,31 @@ export default function LiveScorePage() {
     if (p === "AD" || o === "AD") return "advantage";
 
     // Break points (opponent service + player mène au score)
-    const isOpponentServing = getServer(score) === "opponent";
+function getPointContext(score) {
+  if (!score) return "normal";
+
+  const p = score.current_game_player;
+  const o = score.current_game_opponent;
+
+  const { server } = getServer(score);
+  const isOpponentServing = server === "opponent";
+
+  // Deuce
+  if (p === "40" && o === "40") return "deuce";
+
+  // Advantage
+  if (p === "AD" || o === "AD") return "advantage";
+
+  // Break point
+  if (isOpponentServing && p === "40" && o !== "40")
+    return "break_point";
+
+  // Game point
+  if (!isOpponentServing && o === "40" && p !== "40")
+    return "game_point";
+
+  return "normal";
+}
 
     if (isOpponentServing && p === "40" && o !== "40") return "break_point";
 
@@ -109,12 +133,6 @@ export default function LiveScorePage() {
     setTimeout(flushQueue, 0);
   }
 
-  const isDeuceSide = (() => {
-    const map = { 0: 0, 15: 1, 30: 2, 40: 3, AD: 4 };
-    const p = map[match?.score.current_game_player] ?? 0;
-    const o = map[match?.score.current_game_opponent] ?? 0;
-    return (p + o) % 2 === 0;
-  })();
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
@@ -138,7 +156,7 @@ export default function LiveScorePage() {
     const optimistic = {
       ...match,
       score: scoreCopy,
-      serving: newServer, // optionnel mais propre
+serving: newServer.server,
       ...(result.matchWon
         ? {
             status: "Terminé",
@@ -428,7 +446,7 @@ export default function LiveScorePage() {
           </button>
 
           <button
-            onClick={() => scorePoint(serving, "ace", true)}
+onClick={() => scorePoint(server, "ace", true)}
             className={defineButtonStyle("purple")}
           >
             Ace
