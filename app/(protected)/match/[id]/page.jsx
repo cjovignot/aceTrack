@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "../../../../lib/api";
 import { computeStats } from "../../../../lib/stats";
 import ScoreBoard from "../../../../components/ScoreBoard";
-import { ArrowLeft, Trophy, Clock, Trash2, X } from "lucide-react";
+import { ArrowLeft, Trophy, Clock, Trash2, X, RefreshCw } from "lucide-react";
 
 export default function MatchDetailPage() {
   const { id } = useParams();
@@ -48,6 +48,11 @@ export default function MatchDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  function reloadComponent() {
+    console.log("hey");
+    window.location.reload();
+  }
 
   async function handleDelete() {
     await api.delete("/api/matches/" + id);
@@ -127,6 +132,9 @@ export default function MatchDetailPage() {
           className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600"
         >
           <ArrowLeft className="w-4 h-4" /> Retour
+        </button>
+        <button onClick={() => reloadComponent()}>
+          <RefreshCw className="w-4 h-4" />
         </button>
         <button
           onClick={() => setShowConfirm(true)}
