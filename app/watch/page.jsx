@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import api from "../../../lib/api";
-import { addPoint, getScoreDisplay } from "../../../lib/tennisScoring";
-import ScoreBoard from "../../../components/ScoreBoard";
+import api from "@/lib/api";
+import { addPoint, getScoreDisplay } from "@/lib/tennisScoring";
+import ScoreBoard from "@/components/ScoreBoard";
 import { ArrowLeft, Timer, Undo2, StopCircle } from "lucide-react";
 
 export default function LiveScorePage() {
@@ -121,7 +121,7 @@ export default function LiveScorePage() {
 
     // 🔥 remove from queue if pending
     const index = queueRef.current.findIndex(
-      (p) => p.client_id === last.client_id
+      (p) => p.client_id === last.client_id,
     );
 
     if (index !== -1) {
@@ -129,7 +129,7 @@ export default function LiveScorePage() {
     } else {
       try {
         const { data: points } = await api.get(
-          "/api/points?match_id=" + match._id
+          "/api/points?match_id=" + match._id,
         );
 
         if (points.length) {
@@ -156,8 +156,7 @@ export default function LiveScorePage() {
     router.push("/match/" + match._id);
   }
 
-  const fmt = (s) =>
-    Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
 
   if (loading) {
     return (
