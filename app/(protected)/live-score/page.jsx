@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import api from "../../lib/api";
-import { addPoint, getScoreDisplay } from "../../lib/tennisScoring";
-import ScoreBoard from "../../../components/ScoreBoard";
+import api from "@/lib/api";
+import { addPoint, getScoreDisplay } from "@/lib/tennisScoring";
+import ScoreBoard from "@/components/ScoreBoard";
 import { ArrowLeft, Timer, Undo2, StopCircle } from "lucide-react";
 
 export default function LiveScorePage() {
