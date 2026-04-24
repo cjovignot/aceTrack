@@ -1,8 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { redirect, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "../../../lib/api";
-import { addPoint, getScoreDisplay } from "../../../lib/tennisScoring";
+import {
+  addPoint,
+  getScoreDisplay,
+  getServer,
+} from "../../../lib/tennisScoring";
 import ScoreBoard from "../../../components/ScoreBoard";
 import { ArrowLeft, Timer, Undo2 } from "lucide-react";
 
@@ -47,7 +51,7 @@ export default function LiveScorePage() {
     if (p === "AD" || o === "AD") return "advantage";
 
     // Break points (opponent service + player mène au score)
-    const isOpponentServing = score.serving === "opponent";
+    const isOpponentServing = getServer(score) === "opponent";
 
     if (isOpponentServing && p === "40" && o !== "40") return "break_point";
 
@@ -58,23 +62,6 @@ export default function LiveScorePage() {
   }
 
   const pointContext = getPointContext(match?.score);
-
-  function getServeSide(score) {
-    if (!score) return "deuce";
-
-    const map = {
-      0: 0,
-      15: 1,
-      30: 2,
-      40: 3,
-      AD: 4,
-    };
-
-    const p = map[score.current_game_player] ?? 0;
-    const o = map[score.current_game_opponent] ?? 0;
-
-    return (p + o) % 2 === 0 ? "deuce" : "ad";
-  }
 
   function formatPlayerName(name = "") {
     const parts = name.trim().split(" ");
@@ -122,6 +109,13 @@ export default function LiveScorePage() {
     setTimeout(flushQueue, 0);
   }
 
+  const isDeuceSide = (() => {
+    const map = { 0: 0, 15: 1, 30: 2, 40: 3, AD: 4 };
+    const p = map[match?.score.current_game_player] ?? 0;
+    const o = map[match?.score.current_game_opponent] ?? 0;
+    return (p + o) % 2 === 0;
+  })();
+
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
     if (!match || !match.score) return;
@@ -133,6 +127,9 @@ export default function LiveScorePage() {
 
     const clientId = Date.now() + "_" + Math.random();
 
+    const scoreCopy = JSON.parse(JSON.stringify(result.score));
+    const newServer = getServer(scoreCopy);
+
     historyRef.current.push({
       matchSnapshot: JSON.parse(JSON.stringify(match)),
       client_id: clientId,
@@ -140,7 +137,8 @@ export default function LiveScorePage() {
 
     const optimistic = {
       ...match,
-      score: result.score,
+      score: scoreCopy,
+      serving: newServer, // optionnel mais propre
       ...(result.matchWon
         ? {
             status: "Terminé",
@@ -178,7 +176,8 @@ export default function LiveScorePage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver = match.score.serving === "player" ? "opponent" : "player";
+      const receiver =
+        getServer(match.score) === "player" ? "opponent" : "player";
 
       scorePoint(receiver, "double_fault", false);
       setServiceFaults(0);
@@ -258,8 +257,7 @@ export default function LiveScorePage() {
   }
 
   // ✅ SAFE ZONE (match existe ici)
-  const serveSide = getServeSide(match.score);
-  const serving = match.score?.serving;
+  const { server, side } = getServer(match?.score);
 
   return (
     <div className="w-full px-6 py-5 mx-auto">
@@ -284,7 +282,7 @@ export default function LiveScorePage() {
         opponentName={formatPlayerName(match.opponent_name)}
       /> */}
 
-      {match.status !== "Terminé" && (
+      {match.status !== "Terminé" ? (
         <div className="grid grid-cols-4 grid-rows-3 gap-1">
           <button
             onClick={() => scorePoint("player", "unforced_error", false)}
@@ -297,11 +295,11 @@ export default function LiveScorePage() {
             {/* SERVE INDICATOR */}
             <div
               className={`absolute w-2 h-2 rounded-full bg-yellow-400 ${
-                serving === "opponent"
-                  ? serveSide === "deuce"
+                server === "opponent"
+                  ? side === "deuce"
                     ? "top-2 left-2"
                     : "top-2 right-2"
-                  : serveSide === "deuce"
+                  : side === "deuce"
                     ? "bottom-2 right-2"
                     : "bottom-2 left-2"
               }`}
@@ -435,6 +433,16 @@ export default function LiveScorePage() {
           >
             Ace
           </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <p className="mb-2 text-sm text-gray-400">Match terminé</p>
+
+          <p className="text-2xl font-bold text-yellow-400">
+            {match.winner === "player"
+              ? formatPlayerName(match.player_name)
+              : formatPlayerName(match.opponent_name)}
+          </p>
         </div>
       )}
     </div>
