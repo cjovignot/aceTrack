@@ -21,6 +21,7 @@ const schema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    public_token: String,
 
     // Players
     player_first_name: String,
