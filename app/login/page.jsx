@@ -12,16 +12,16 @@ export default function LoginPage() {
   }, [user]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
-      <div className="w-full max-w-sm p-8 text-center bg-white border shadow-sm rounded-2xl">
+    <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="w-full max-w-sm p-8 text-center border shadow-sm rounded-2xl">
         <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 text-3xl bg-green-100 rounded-full">
           🎾
         </div>
-        <h1 className="mb-2 text-2xl font-bold">
+        <h1 className="mb-2 text-cyan-300 text-2xl font-bold">
           aceTrack
         </h1>
         <p className="mb-8 text-sm text-gray-400">
-          Starter Kit NextJS 15 : Start Now !
+          
         </p>
         <a
           href="/api/auth/google"
