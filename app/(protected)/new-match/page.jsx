@@ -7,7 +7,6 @@ import { createInitialScore } from "../../../lib/tennisScoring";
 import { ArrowLeft, Play } from "lucide-react";
 
 const surfaces = ["Terre-battue", "Quick", "Green Set", "Terbal"];
-
 const pill = (active) =>
   "flex-1 p-3 rounded-xl border text-sm font-medium transition " +
   (active
@@ -17,7 +16,6 @@ const pill = (active) =>
 export default function NewMatchPage() {
   const { user } = useAuth();
   const router = useRouter();
-
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -43,12 +41,15 @@ export default function NewMatchPage() {
   });
 
   useEffect(() => {
-    api.get("/api/profile").then((r) => setProfile(r.data)).catch(() => {});
+    api
+      .get("/api/profile")
+      .then((r) => setProfile(r.data))
+      .catch(() => {});
   }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // 🎲 FLIP FUNCTION
+  // 🎲 FLIP
   function flipCoin() {
     if (isFlipping) return;
 
@@ -69,7 +70,6 @@ export default function NewMatchPage() {
 
   async function handleStart() {
     if (!form.opponent_first_name.trim()) return;
-
     setLoading(true);
 
     const playerName =
@@ -143,29 +143,156 @@ export default function NewMatchPage() {
 
         {/* --- JOUEURS --- */}
         <Section title="Joueurs">
-          {/* ton code intact */}
-          ...
+          <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+            Vous
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <Field label="Prénom">
+              <input
+                value={form.player_first_name}
+                onChange={(e) => set("player_first_name", e.target.value)}
+                placeholder={profile?.display_name.split(" ")[0] || "Prénom"}
+                className={inp}
+              />
+            </Field>
+            <Field label="Nom">
+              <input
+                value={form.player_last_name}
+                onChange={(e) => set("player_last_name", e.target.value)}
+                placeholder={profile?.display_name.split(" ")[1] || "Nom"}
+                className={inp}
+              />
+            </Field>
+          </div>
+
+          <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+            Adversaire *
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Prénom">
+              <input
+                value={form.opponent_first_name}
+                onChange={(e) => set("opponent_first_name", e.target.value)}
+                placeholder="Prénom"
+                className={inp}
+              />
+            </Field>
+            <Field label="Nom">
+              <input
+                value={form.opponent_last_name}
+                onChange={(e) => set("opponent_last_name", e.target.value)}
+                placeholder="Nom"
+                className={inp}
+              />
+            </Field>
+          </div>
         </Section>
 
         {/* --- SURFACE --- */}
         <Section title="Surface">
-          ...
+          <div className="grid grid-cols-2 gap-2">
+            {surfaces.map((s) => (
+              <button
+                key={s}
+                onClick={() => set("surface", s)}
+                className={pill(form.surface === s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </Section>
 
         {/* --- FORMAT --- */}
         <Section title="Format">
-          ...
+          <Field label="Sets gagnants">
+            <div className="flex gap-2">
+              {[2, 3, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => set("sets_to_win", n)}
+                  className={pill(form.sets_to_win === n)}
+                >
+                  {n} sets
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Jeux par set">
+            <div className="flex gap-2">
+              {[3, 4, 5, 6].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => set("games_per_set", n)}
+                  className={pill(form.games_per_set === n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </Field>
         </Section>
 
         {/* --- RÈGLES --- */}
         <Section title="Règles">
-          ...
+          <SwitchRow
+            label="Avantage à 40-40"
+            desc={form.advantage ? "Avantage classique" : "Point décisif"}
+            checked={form.advantage}
+            onChange={(v) => set("advantage", v)}
+          />
+
+          <SwitchRow
+            label="Tie-break"
+            desc={
+              form.tiebreak
+                ? "Au " + form.games_per_set + "-" + form.games_per_set
+                : "Pas de tie-break"
+            }
+            checked={form.tiebreak}
+            onChange={(v) => set("tiebreak", v)}
+          />
+
+          {form.tiebreak && (
+            <div className="pl-4 ml-4 border-l-2 border-gray-200">
+              <Field label="Points tie-break">
+                <Stepper
+                  value={form.tiebreak_points}
+                  min={5}
+                  max={15}
+                  onChange={(v) => set("tiebreak_points", v)}
+                />
+              </Field>
+            </div>
+          )}
+
+          <SwitchRow
+            label="Super Tie-break (dernier set)"
+            desc={
+              form.super_tiebreak ? "Dernier set décisif" : "Dernier set normal"
+            }
+            checked={form.super_tiebreak}
+            onChange={(v) => set("super_tiebreak", v)}
+          />
+
+          {form.super_tiebreak && (
+            <div className="pl-4 ml-4 border-l-2 border-gray-200">
+              <Field label="Points super tie-break">
+                <Stepper
+                  value={form.super_tiebreak_points}
+                  min={7}
+                  max={15}
+                  onChange={(v) => set("super_tiebreak_points", v)}
+                />
+              </Field>
+            </div>
+          )}
         </Section>
 
-        {/* 🎲 COIN FLIP AJOUTÉ ICI */}
+        {/* 🎲 COIN FLIP */}
         <Section title="Pile ou Face">
           <div className="flex flex-col items-center gap-4">
-
             <div
               className={`w-24 h-24 rounded-full border flex items-center justify-center text-lg font-bold bg-gray-950 ${
                 isFlipping ? "animate-coin" : ""
@@ -213,7 +340,7 @@ export default function NewMatchPage() {
           </div>
         </Section>
 
-        {/* --- PREMIER SERVICE (inchangé) --- */}
+        {/* --- PREMIER SERVICE --- */}
         <Section title="Premier service">
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -231,7 +358,6 @@ export default function NewMatchPage() {
           </div>
         </Section>
 
-        {/* --- BOUTON --- */}
         <button
           onClick={handleStart}
           disabled={!form.opponent_first_name.trim() || loading}
@@ -245,8 +371,7 @@ export default function NewMatchPage() {
   );
 }
 
-
-
+// --- UI HELPERS (inchangés) ---
 const inp =
   "w-full h-11 px-4 rounded-xl border bg-gray-950 border-cyan-300/20 focus:outline-none focus:border-green-500";
 
