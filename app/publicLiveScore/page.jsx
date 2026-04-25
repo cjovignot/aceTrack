@@ -1,44 +1,98 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
-export default function PublicLivePage() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-
+export default function PublicLiveScore() {
+  const [pairingToken, setPairingToken] = useState(null);
+  const [publicToken, setPublicToken] = useState(null);
   const [match, setMatch] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  const intervalRef = useRef(null);
+  const pairingIntervalRef = useRef(null);
+  const matchIntervalRef = useRef(null);
   const lastUpdateRef = useRef(0);
+  const hasStarted = useRef(false);
 
-  // ---------- LOAD + POLLING ----------
+  // ---------- INIT ----------
   useEffect(() => {
-    if (!token) return;
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+    createPairing();
+  }, []);
+
+  // ---------- CREATE PAIRING (viewer) ----------
+  async function createPairing() {
+    const res = await fetch("/api/pairing/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ type: "viewer" }), // 🔥 important
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data.token) return;
+
+    setPairingToken(data.token);
+    startPairingPolling(data.token);
+  }
+
+  // ---------- POLLING PAIRING ----------
+  function startPairingPolling(token) {
+    if (pairingIntervalRef.current) return;
+
+    pairingIntervalRef.current = setInterval(async () => {
+      const res = await fetch(`/api/pairing/${token}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // 🔥 on attend le public_token (clé du système)
+      if (data.connected && data.public_token) {
+        setIsConnected(true);
+        setPublicToken(data.public_token);
+
+        clearInterval(pairingIntervalRef.current);
+        pairingIntervalRef.current = null;
+      }
+    }, 1500);
+  }
+
+  // ---------- MATCH POLLING (PUBLIC) ----------
+  useEffect(() => {
+    if (!publicToken) return;
 
     async function loadMatch() {
-      const res = await fetch(`/api/public/match?token=${token}`);
+      const res = await fetch(
+        `/api/public/match?token=${publicToken}`
+      );
+
       if (!res.ok) return;
 
       const data = await res.json();
       setMatch(data);
-      startPolling();
+
+      startMatchPolling(publicToken);
     }
 
     loadMatch();
 
-    return () => clearInterval(intervalRef.current);
-  }, [token]);
+    return () => clearInterval(matchIntervalRef.current);
+  }, [publicToken]);
 
-  function startPolling() {
-    if (intervalRef.current) return;
+  function startMatchPolling(token) {
+    if (matchIntervalRef.current) return;
 
-    intervalRef.current = setInterval(async () => {
-      const res = await fetch(`/api/public/match?token=${token}`);
+    matchIntervalRef.current = setInterval(async () => {
+      const res = await fetch(
+        `/api/public/match?token=${token}`
+      );
+
       if (!res.ok) return;
 
       const updated = await res.json();
-
       const serverTime = new Date(updated.updatedAt || 0).getTime();
 
       if (serverTime <= lastUpdateRef.current) return;
@@ -51,14 +105,6 @@ export default function PublicLivePage() {
   // ---------- UI ----------
   const score = match?.score || {};
 
-  if (!token) {
-    return <div>Token manquant</div>;
-  }
-
-  if (!match) {
-    return <div>Chargement...</div>;
-  }
-
   return (
     <div
       style={{
@@ -67,22 +113,42 @@ export default function PublicLivePage() {
         position: "fixed",
         inset: 0,
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <div style={{ fontSize: 32 }}>
-        <div>
-          {score.sets_opponent?.join(" ")} |{" "}
-          {score.current_game_opponent || 0}
-        </div>
+      {/* ---------- QR CODE ---------- */}
+      {!isConnected && pairingToken && (
+        <div style={{ textAlign: "center" }}>
+          <p style={{ color: "#4ade80", marginBottom: 10 }}>
+            Scannez pour afficher le score en direct
+          </p>
 
-        <div style={{ marginTop: 10 }}>
-          {score.sets_player?.join(" ")} |{" "}
-          {score.current_game_player || 0}
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+              `${window.location.origin}/connect?token=${pairingToken}`
+            )}`}
+            width={220}
+          />
         </div>
-      </div>
+      )}
+
+      {/* ---------- SCORE ---------- */}
+      {isConnected && match && (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 32 }}>
+            <div>
+              {score.sets_opponent?.join(" ")} |{" "}
+              {score.current_game_opponent || 0}
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              {score.sets_player?.join(" ")} |{" "}
+              {score.current_game_player || 0}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
