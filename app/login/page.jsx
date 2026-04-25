@@ -13,11 +13,11 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-sm p-8 text-center border shadow-sm rounded-2xl">
-        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 text-3xl bg-green-100 rounded-full">
+      <div className="w-full max-w-sm p-8 text-center shadow-sm rounded-2xl">
+        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 text-4xl bg-transparent rounded-full">
           🎾
         </div>
-        <h1 className="mb-2 text-cyan-300 text-2xl font-bold">
+        <h1 className="mb-2 text-cyan-400 text-2xl font-bold">
           aceTrack
         </h1>
         <p className="mb-8 text-sm text-gray-400">
@@ -25,7 +25,7 @@ export default function LoginPage() {
         </p>
         <a
           href="/api/auth/google"
-          className="flex items-center justify-center w-full h-12 gap-3 text-sm font-medium transition border border-gray-200 rounded-xl hover:bg-gray-50"
+          className="flex items-center justify-center w-full h-12 gap-3 text-sm font-medium transition border border-cyan-400 rounded-xl hover:bg-gray-50"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
