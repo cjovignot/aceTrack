@@ -244,3 +244,73 @@ export default function NewMatchPage() {
     </div>
   );
 }
+
+
+
+const inp =
+  "w-full h-11 px-4 rounded-xl border bg-gray-950 border-cyan-300/20 focus:outline-none focus:border-green-500";
+
+function Section({ title, children }) {
+  return (
+    <div>
+      <h3 className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+        {title}
+      </h3>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block mb-1 text-xs text-gray-500">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SwitchRow({ label, desc, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-gray-400">{desc}</p>
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        className={
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors " +
+          (checked ? "bg-cyan-300/70" : "bg-gray-900")
+        }
+      >
+        <span
+          className={
+            "inline-block h-4 w-4 transform rounded-full bg-white transition-transform " +
+            (checked ? "translate-x-6" : "translate-x-1")
+          }
+        />
+      </button>
+    </div>
+  );
+}
+
+function Stepper({ value, min, max, onChange }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="flex items-center justify-center w-8 h-8 text-lg font-bold border rounded-full hover:bg-gray-50"
+      >
+        −
+      </button>
+      <span className="w-8 text-lg font-bold text-center">{value}</span>
+      <button
+        onClick={() => onChange(Math.min(max, value + 1))}
+        className="flex items-center justify-center w-8 h-8 text-lg font-bold border rounded-full hover:bg-gray-50"
+      >
+        +
+      </button>
+    </div>
+  );
+}
