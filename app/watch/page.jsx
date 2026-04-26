@@ -339,9 +339,10 @@ export default function WatchPage() {
   const isFinished = match?.status === "Terminé";
 
   const cellBtn = (bg, active = false) => ({
-    background: active ? "#facc15" : bg,
-    color: active ? "#000" : "#fff",
-    border: "none",
+    background: active ? bg : "transparent",
+    color: active ? "#dad11f" : bg,
+    border: "solid 1px",
+    borderColor: bg,
     borderRadius: 6,
     fontWeight: 700,
     fontSize: 14,
@@ -381,7 +382,7 @@ export default function WatchPage() {
             justifyContent: "end",
             gap: 8,
           }}
-          className="p-2 pb-4 w-fit"
+          className="w-full p-2 pb-4"
         >
           <div className="p-3 border border-green-400 rounded-xl">
             <img
@@ -400,13 +401,13 @@ export default function WatchPage() {
 
       <button
         onClick={() => scorePoint("player", "unforced_error", false)}
-        style={cellBtn("#4a1515")}
+        style={cellBtn("#b32727")}
       >
         Faute
       </button>
       <button
         onClick={() => scorePoint("opponent", "winner", true)}
-        style={cellBtn("#1e3a5f")}
+        style={cellBtn("#6296da")}
       >
         Gagnant
       </button>
@@ -471,29 +472,32 @@ export default function WatchPage() {
         </div>
       </div>
 
-      <button onClick={handleServiceFault} style={cellBtn("#2d1a00")}>
-        Service
+      <button
+        onClick={handleServiceFault}
+        style={serviceFaults > 0 ? cellBtn("#ed640f") : cellBtn("#ec9720")}
+      >
+        {serviceFaults > 0 ? "Double Faute" : "Faute service"}
       </button>
       <button
         onClick={() => scorePoint(serving, "ace", true)}
-        style={cellBtn("#1a1a2e")}
+        style={cellBtn("#e2e629")}
       >
         Ace
       </button>
 
       <button
         onClick={() => scorePoint("opponent", "unforced_error", false)}
-        style={cellBtn("#4a1515")}
+        style={cellBtn("#b32727")}
       >
         Faute
       </button>
       <button
         onClick={() => scorePoint("player", "winner", true)}
-        style={cellBtn("#14532d")}
+        style={cellBtn("#269351")}
       >
         Gagnant
       </button>
-      <button onClick={handleUndo} style={cellBtn("#111")}>
+      <button onClick={handleUndo} style={cellBtn("#afc7f5")}>
         ↩
       </button>
 
