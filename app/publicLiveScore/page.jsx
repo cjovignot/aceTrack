@@ -8,7 +8,7 @@ export default function PublicLiveScore() {
   const [selectedToken, setSelectedToken] = useState(null);
 
   const [match, setMatch] = useState(null);
-  const [points, setPoints] = useState([]); // 👈 IMPORTANT
+  const [points, setPoints] = useState([]);
 
   const intervalRef = useRef(null);
 
@@ -17,7 +17,6 @@ export default function PublicLiveScore() {
   ========================= */
   useEffect(() => {
     loadMatches();
-
     const i = setInterval(loadMatches, 5000);
     return () => clearInterval(i);
   }, []);
@@ -25,25 +24,48 @@ export default function PublicLiveScore() {
   async function loadMatches() {
     const res = await fetch("/api/public/matches");
     if (!res.ok) return;
-
     const data = await res.json();
     setMatches(data);
   }
 
   /* =========================
-     LOAD MATCH + POINTS
+     LOAD LIVE MATCH
   ========================= */
   useEffect(() => {
     if (!selectedToken) return;
 
     loadMatch(selectedToken);
-    loadPoints(selectedToken); // 👈 AJOUT
+    loadPoints(selectedToken);
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
-    intervalRef.current = setInterval(() => {
-      loadMatch(selectedToken);
-      loadPoints(selectedToken); // 👈 LIVE UPDATE
+    intervalRef.current = setInterval(async () => {
+      try {
+        const resMatch = await fetch(
+          `/api/public/match?token=${selectedToken}`
+        );
+        if (!resMatch.ok) return;
+
+        const matchData = await resMatch.json();
+        setMatch(matchData);
+
+        if (matchData.status === "Terminé") {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+          return;
+        }
+
+        const resPoints = await fetch(
+          `/api/public/match-points?token=${selectedToken}`
+        );
+
+        if (resPoints.ok) {
+          const pts = await resPoints.json();
+          setPoints(pts || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }, 2000);
 
     return () => clearInterval(intervalRef.current);
@@ -52,21 +74,24 @@ export default function PublicLiveScore() {
   async function loadMatch(token) {
     const res = await fetch(`/api/public/match?token=${token}`);
     if (!res.ok) return;
-
-    const data = await res.json();
-    setMatch(data);
+    setMatch(await res.json());
   }
 
   async function loadPoints(token) {
     const res = await fetch(`/api/public/match-points?token=${token}`);
     if (!res.ok) return;
-
-    const data = await res.json();
-    setPoints(data || []);
+    setPoints(await res.json() || []);
   }
 
+  const winnerLabel =
+    match?.winner === "player"
+      ? match.player_name
+      : match?.winner === "opponent"
+        ? match.opponent_name
+        : null;
+
   /* =========================
-     UI: LIST
+     LIST VIEW
   ========================= */
   if (!selectedToken) {
     return (
@@ -83,6 +108,10 @@ export default function PublicLiveScore() {
               <div className="font-semibold">
                 {m.player_name} vs {m.opponent_name}
               </div>
+
+              <div className="text-xs text-gray-400">
+                {m.status}
+              </div>
             </button>
           ))}
         </div>
@@ -94,15 +123,24 @@ export default function PublicLiveScore() {
      LIVE VIEW
   ========================= */
   return (
-    <div className="flex items-center justify-center min-h-screen text-white bg-black">
+    <div className="relative flex items-center justify-center min-h-screen text-white bg-black">
       {match ? (
-        <ScoreBoard
-          score={match.score}
-          points={points} // 👈 CRUCIAL FIX
-          matchStatus={match.status}
-          playerName={match.player_name}
-          opponentName={match.opponent_name}
-        />
+        <>
+          <ScoreBoard
+            score={match.score}
+            points={points}
+            matchStatus={match.status}
+            playerName={match.player_name}
+            opponentName={match.opponent_name}
+          />
+
+          {match.status === "Terminé" && (
+            <div className="absolute bottom-6 text-center text-yellow-400 text-sm">
+              <div>Match terminé</div>
+              {winnerLabel && <div>Vainqueur : {winnerLabel}</div>}
+            </div>
+          )}
+        </>
       ) : (
         <p>Chargement...</p>
       )}

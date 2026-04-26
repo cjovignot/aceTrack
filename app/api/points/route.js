@@ -72,6 +72,7 @@ export async function GET(request) {
 }
 
 // ---------- CREATE POINT ----------
+// ---------- CREATE POINT ----------
 export async function POST(request) {
   await connectDB();
 
@@ -79,7 +80,6 @@ export async function POST(request) {
 
   try {
     body = await request.json();
-    // console.log(body);
   } catch (e) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -95,7 +95,15 @@ export async function POST(request) {
   if (!match) {
     return NextResponse.json(
       { error: "Unauthorized or match not found" },
-      { status: 404 },
+      { status: 404 }
+    );
+  }
+
+  // 🔥🔥🔥 AJOUT ICI
+  if (match.status === "Terminé") {
+    return NextResponse.json(
+      { error: "Match already finished" },
+      { status: 400 }
     );
   }
 
