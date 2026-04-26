@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { connectDB } from "@/lib/db";
+import Match from "@/models/Match";
+import PointLog from "@/models/PointLog"; // ✅ FIX
 
 export async function GET(req) {
   try {
@@ -14,13 +15,12 @@ export async function GET(req) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    await connectDB();
 
     /* =========================
-       1. FIND MATCH BY TOKEN
+       1. MATCH
     ========================= */
-    const match = await db.collection("matches").findOne({
+    const match = await Match.findOne({
       public_token: token,
     });
 
@@ -32,29 +32,17 @@ export async function GET(req) {
     }
 
     /* =========================
-       2. FETCH POINTS
+       2. POINTS (PointLog ✅)
     ========================= */
-    const points = await db
-      .collection("points")
-      .find({
-        match_id: new ObjectId(match._id),
-        is_deleted: { $ne: true },
-      })
+    const points = await PointLog.find({
+      match_id: match._id,
+      is_deleted: { $ne: true },
+    })
       .sort({ timestamp: 1 })
-      .toArray();
+      .select("timestamp point_winner shot_type score_at_point")
+      .lean();
 
-    /* =========================
-       3. NORMALIZE OUTPUT
-    ========================= */
-    const formatted = points.map((p) => ({
-      _id: p._id,
-      timestamp: p.timestamp,
-      point_winner: p.point_winner,
-      shot_type: p.shot_type,
-      score_at_point: p.score_at_point,
-    }));
-
-    return NextResponse.json(formatted);
+    return NextResponse.json(points);
   } catch (err) {
     console.error("match-points error:", err);
 
