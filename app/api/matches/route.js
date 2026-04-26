@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import Match from "@/models/Match";
+import crypto from "crypto";
 
 // ---------- GET MATCHES ----------
 export async function GET(request) {
@@ -46,6 +47,7 @@ export async function POST(request) {
     await connectDB();
 
     const user = getUser(request);
+    const public_token = crypto.randomBytes(16).toString("hex");
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,6 +58,7 @@ export async function POST(request) {
     const match = await Match.create({
       ...body,
       userId: user.id,
+      public_token,
     });
 
     return NextResponse.json(match, { status: 201 });

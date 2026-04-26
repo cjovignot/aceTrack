@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ScoreBoard from "@/components/ScoreBoard";
 
 export default function PublicLiveScore() {
   const [pairingToken, setPairingToken] = useState(null);
@@ -65,9 +66,7 @@ export default function PublicLiveScore() {
     if (!publicToken) return;
 
     async function loadMatch() {
-      const res = await fetch(
-        `/api/public/match?token=${publicToken}`
-      );
+      const res = await fetch(`/api/public/match?token=${publicToken}`);
 
       if (!res.ok) return;
 
@@ -86,9 +85,7 @@ export default function PublicLiveScore() {
     if (matchIntervalRef.current) return;
 
     matchIntervalRef.current = setInterval(async () => {
-      const res = await fetch(
-        `/api/public/match?token=${token}`
-      );
+      const res = await fetch(`/api/public/match?token=${token}`);
 
       if (!res.ok) return;
 
@@ -105,6 +102,8 @@ export default function PublicLiveScore() {
   // ---------- UI ----------
   const score = match?.score || {};
 
+  console.log(isConnected, match);
+
   return (
     <div
       style={{
@@ -119,35 +118,32 @@ export default function PublicLiveScore() {
     >
       {/* ---------- QR CODE ---------- */}
       {!isConnected && pairingToken && (
-        <div style={{ textAlign: "center" }}>
-          <p style={{ color: "#4ade80", marginBottom: 10 }}>
+        <div className="flex flex-col items-center">
+          <p className="w-3/4 mb-4 text-center text-green-400">
             Scannez pour afficher le score en direct
           </p>
 
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-              `${window.location.origin}/connect?token=${pairingToken}`
-            )}`}
-            width={220}
-          />
+          <div className="p-3 border border-green-400 rounded-xl">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                `${window.location.origin}/connect?token=${pairingToken}`,
+              )}`}
+              width={220}
+            />
+          </div>
         </div>
       )}
 
       {/* ---------- SCORE ---------- */}
       {isConnected && match && (
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 32 }}>
-            <div>
-              {score.sets_opponent?.join(" ")} |{" "}
-              {score.current_game_opponent || 0}
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-              {score.sets_player?.join(" ")} |{" "}
-              {score.current_game_player || 0}
-            </div>
-          </div>
-        </div>
+        <>
+          {/* SCORE */}
+          <ScoreBoard
+            score={match.score}
+            playerName={match.player_name}
+            opponentName={match.opponent_name}
+          />
+        </>
       )}
     </div>
   );

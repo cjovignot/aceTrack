@@ -11,17 +11,19 @@ export function middleware(request) {
     "/api/auth/callback",
     "/watch",
     "/connect",
+    "/publicLiveScore",
   ];
 
   const isPublicPage = publicPaths.some((p) => pathname.startsWith(p));
 
-  // ---------- WATCH / PAIRING API (CRITIQUE) ----------
+  // ---------- WATCH / PUBLIC API ----------
   const isWatchApi =
     pathname.startsWith("/api/pairing") ||
     pathname.startsWith("/api/matches") ||
-    pathname.startsWith("/api/points");
+    pathname.startsWith("/api/points") ||
+    pathname.startsWith("/api/public"); // 🔥 AJOUT ICI
 
-  // 👉 watch API ne doit PAS dépendre du login cookie
+  // 👉 APIs ne doivent PAS dépendre du login cookie
   if (isWatchApi) {
     return NextResponse.next();
   }

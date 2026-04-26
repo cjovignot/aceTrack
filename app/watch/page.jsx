@@ -379,22 +379,22 @@ export default function WatchPage() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "end",
-            gap: 10,
+            gap: 8,
           }}
-          className="p-2 pb-5 w-fit"
+          className="p-2 pb-4 w-fit"
         >
-          <p
-            className="flex text-center w-fit"
-            style={{ color: "#4ade80", fontSize: 14 }}
-          >
-            Scannez depuis votre l'app pour connecter votre montre
+          <div className="p-3 border border-green-400 rounded-xl">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                `${window.location.origin}/connect?token=${pairingToken}`,
+              )}`}
+              width={210}
+            />
+          </div>
+
+          <p className="w-3/4 text-xs text-center text-green-400">
+            Scannez pour connecter la montre et saisir les scores
           </p>
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-              `${window.location.origin}/connect?token=${pairingToken}`,
-            )}`}
-            width={210}
-          />
         </div>
       )}
 

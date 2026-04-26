@@ -17,12 +17,8 @@ export default function LoginPage() {
         <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 text-4xl bg-transparent rounded-full">
           🎾
         </div>
-        <h1 className="mb-2 text-cyan-400 text-2xl font-bold">
-          aceTrack
-        </h1>
-        <p className="mb-8 text-sm text-gray-400">
-          
-        </p>
+        <h1 className="mb-2 text-2xl font-bold text-cyan-400">aceTrack</h1>
+        <p className="mb-8 text-sm text-gray-400"></p>
         <a
           href="/api/auth/google"
           className="flex items-center justify-center w-full h-12 gap-3 text-sm font-medium transition border border-cyan-400 rounded-xl hover:bg-gray-50"
@@ -47,6 +43,12 @@ export default function LoginPage() {
           </svg>
           Continue with Google
         </a>
+        <button
+          onClick={() => router.push("/publicLiveScore")}
+          className="px-4 py-2 mt-4 bg-transparent border rounded-xl border-cyan-400 text-cyan-400"
+        >
+          Match LiveScore
+        </button>
       </div>
     </div>
   );
