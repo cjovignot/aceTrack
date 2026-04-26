@@ -55,7 +55,6 @@ export default function WatchPage() {
   const pairingIntervalRef = useRef(null);
   const matchIntervalRef = useRef(null);
 
-  // queue
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
@@ -157,12 +156,20 @@ export default function WatchPage() {
     }, 3000);
   }
 
+  // ---------- BLOCK FINISHED ----------
+  const isFinished = match?.status === "Terminé";
+
+  const winnerLabel =
+    match?.winner === "player"
+      ? match.player_name
+      : match?.winner === "opponent"
+        ? match.opponent_name
+        : null;
+
   // ---------- QUEUE ----------
   async function flushQueue() {
     if (sendingRef.current) return;
     if (queueRef.current.length === 0) return;
-
-    // 🔒 STOP SI TERMINÉ
     if (match?.status === "Terminé") return;
 
     sendingRef.current = true;
@@ -188,7 +195,6 @@ export default function WatchPage() {
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
-    // 🔒 STOP SI TERMINÉ
     if (!match || match.status === "Terminé") return;
 
     setServiceFaults(0);
@@ -246,8 +252,6 @@ export default function WatchPage() {
   // ---------- UNDO ----------
   async function handleUndo() {
     if (undoLockRef.current) return;
-
-    // 🔒 STOP SI TERMINÉ
     if (match?.status === "Terminé") return;
 
     undoLockRef.current = true;
@@ -319,7 +323,6 @@ export default function WatchPage() {
   }
 
   function handleServiceFault() {
-    // 🔒 STOP SI TERMINÉ
     if (!match || match.status === "Terminé") return;
 
     if (serviceFaults === 0) {
@@ -337,15 +340,8 @@ export default function WatchPage() {
   const setsO = score.sets_opponent || [];
   const serving = score.serving;
   const serveSide = getServeSide(score);
-  const isFinished = match?.status === "Terminé";
 
-  const winnerLabel =
-    match?.winner === "player"
-      ? match.player_name
-      : match?.winner === "opponent"
-        ? match.opponent_name
-        : null;
-
+  // 🔥 SERVER INDICATOR RESTAURÉ (TON CODE ORIGINAL)
   const cellBtn = (bg, active = false) => ({
     background: active ? bg : "transparent",
     color: active ? "#dad11f" : bg,
@@ -403,6 +399,7 @@ export default function WatchPage() {
         </div>
       )}
 
+      {/* QR CONNECT */}
       {!isConnected && pairingToken && (
         <div
           style={{
@@ -416,7 +413,6 @@ export default function WatchPage() {
             justifyContent: "end",
             gap: 8,
           }}
-          className="w-full p-2 pb-4"
         >
           <div className="p-3 border border-green-400 rounded-xl">
             <img
@@ -432,6 +428,8 @@ export default function WatchPage() {
           </p>
         </div>
       )}
+
+      {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
 
       <button
         onClick={() => scorePoint("player", "unforced_error", false)}
@@ -450,6 +448,7 @@ export default function WatchPage() {
 
       <div />
 
+      {/* 🔥 SERVER INDICATOR RESTAURÉ */}
       <div
         style={{
           gridColumn: "1 / 3",
@@ -464,21 +463,35 @@ export default function WatchPage() {
           gap: 4,
         }}
       >
+        <div
+          style={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#facc15",
+            ...(serving === "player"
+              ? serveSide === "deuce"
+                ? { bottom: 5, right: 5 }
+                : { bottom: 5, left: 5 }
+              : serveSide === "deuce"
+                ? { top: 5, left: 5 }
+                : { top: 5, right: 5 }),
+          }}
+        />
+
         <div style={{ fontSize: 22 }}>
-          {setsO.map((s, i) => {
-            const opponentWon = s > setsP[i];
-            return (
-              <span
-                key={i}
-                style={{
-                  margin: 4,
-                  color: opponentWon ? "#facc15" : "#fff",
-                }}
-              >
-                {s}
-              </span>
-            );
-          })}
+          {setsO.map((s, i) => (
+            <span
+              key={i}
+              style={{
+                margin: 4,
+                color: s > setsP[i] ? "#facc15" : "#fff",
+              }}
+            >
+              {s}
+            </span>
+          ))}
           <span style={{ color: "#facc15", fontSize: 28 }}>
             {score.current_game_opponent || "0"}
           </span>
@@ -487,20 +500,17 @@ export default function WatchPage() {
         <div style={{ width: "70%", height: 1, background: "#222" }} />
 
         <div style={{ fontSize: 22 }}>
-          {setsP.map((s, i) => {
-            const playerWon = s > setsO[i];
-            return (
-              <span
-                key={i}
-                style={{
-                  margin: 4,
-                  color: playerWon ? "#facc15" : "#fff",
-                }}
-              >
-                {s}
-              </span>
-            );
-          })}
+          {setsP.map((s, i) => (
+            <span
+              key={i}
+              style={{
+                margin: 4,
+                color: s > setsO[i] ? "#facc15" : "#fff",
+              }}
+            >
+              {s}
+            </span>
+          ))}
           <span style={{ color: "#facc15", fontSize: 28 }}>
             {score.current_game_player || "0"}
           </span>
