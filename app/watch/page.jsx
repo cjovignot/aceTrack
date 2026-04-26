@@ -565,9 +565,7 @@ export default function WatchPage() {
               <Trophy size={40} className="text-yellow-400 drop-shadow-lg" />
 
               <h2 className="text-xl font-semibold text-white">
-                {match.winner === "player"
-                  ? match.player_name
-                  : match.opponent_name}
+{match.player_name}
               </h2>
             </div>
           </div>
