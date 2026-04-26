@@ -6,15 +6,19 @@ import ScoreBoard from "@/components/ScoreBoard";
 export default function PublicLiveScore() {
   const [matches, setMatches] = useState([]);
   const [selectedToken, setSelectedToken] = useState(null);
+
   const [match, setMatch] = useState(null);
+  const [points, setPoints] = useState([]); // 👈 IMPORTANT
 
   const intervalRef = useRef(null);
 
-  // ---------- LOAD MATCHES ----------
+  /* =========================
+     LOAD MATCH LIST
+  ========================= */
   useEffect(() => {
     loadMatches();
 
-    const i = setInterval(loadMatches, 5000); // refresh liste
+    const i = setInterval(loadMatches, 5000);
     return () => clearInterval(i);
   }, []);
 
@@ -26,16 +30,20 @@ export default function PublicLiveScore() {
     setMatches(data);
   }
 
-  // ---------- LOAD MATCH ----------
+  /* =========================
+     LOAD MATCH + POINTS
+  ========================= */
   useEffect(() => {
     if (!selectedToken) return;
 
     loadMatch(selectedToken);
+    loadPoints(selectedToken); // 👈 AJOUT
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = setInterval(() => {
       loadMatch(selectedToken);
+      loadPoints(selectedToken); // 👈 LIVE UPDATE
     }, 2000);
 
     return () => clearInterval(intervalRef.current);
@@ -49,7 +57,17 @@ export default function PublicLiveScore() {
     setMatch(data);
   }
 
-  // ---------- UI ----------
+  async function loadPoints(token) {
+    const res = await fetch(`/api/public/match-points?token=${token}`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    setPoints(data || []);
+  }
+
+  /* =========================
+     UI: LIST
+  ========================= */
   if (!selectedToken) {
     return (
       <div className="p-4 text-white bg-black min-h-screen">
@@ -72,12 +90,15 @@ export default function PublicLiveScore() {
     );
   }
 
-  // ---------- LIVE VIEW ----------
+  /* =========================
+     LIVE VIEW
+  ========================= */
   return (
     <div className="flex items-center justify-center min-h-screen text-white bg-black">
       {match ? (
         <ScoreBoard
           score={match.score}
+          points={points} // 👈 CRUCIAL FIX
           playerName={match.player_name}
           opponentName={match.opponent_name}
         />

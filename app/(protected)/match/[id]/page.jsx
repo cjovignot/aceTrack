@@ -192,6 +192,7 @@ export default function MatchDetailPage() {
       {/* SCORE */}
       <ScoreBoard
         score={match.score}
+        points={points}
         playerName={match.player_name}
         opponentName={match.opponent_name}
       />

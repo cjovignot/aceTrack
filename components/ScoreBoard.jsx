@@ -5,7 +5,6 @@ export default function ScoreBoard({
   points = [],
   playerName,
   opponentName,
-  compact = false,
 }) {
   if (!score) return null;
 
@@ -14,56 +13,28 @@ export default function ScoreBoard({
   const sets = Math.max(sP.length, sO.length);
 
   /* =========================
-     🧠 SAFE JSON PARSE
-  ========================= */
-  const parseScore = (p) => {
-    if (!p?.score_at_point) return null;
-
-    try {
-      return JSON.parse(p.score_at_point);
-    } catch {
-      return null;
-    }
-  };
-
-  /* =========================
-     🎯 MATCH START DETECTION
+     🎯 MATCH START (FROM POINTS TABLE)
   ========================= */
   const getMatchStartTimestamp = (pts) => {
     if (!pts?.length) return null;
 
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i];
-      if (p.is_deleted) continue;
+    const firstValid = pts.find((p) => !p.is_deleted);
 
-      const sc = parseScore(p);
-      if (!sc) continue;
+    if (!firstValid) return null;
 
-      const isStart =
-        (sc.sets_player?.[0] ?? 0) === 0 &&
-        (sc.sets_opponent?.[0] ?? 0) === 0 &&
-        (sc.current_set ?? 0) === 0;
+    const ms = new Date(firstValid.timestamp).getTime();
 
-      if (isStart) {
-        const ms = new Date(p.timestamp).getTime();
-        if (Number.isFinite(ms)) return ms;
-      }
-    }
-
-    return null;
+    return Number.isFinite(ms) ? ms : null;
   };
 
   /* =========================
-     ⏱️ LIVE TIMER
+     ⏱️ LIVE CLOCK
   ========================= */
-  const [now, setNow] = React.useState(Date.now());
+  const [now, setNow] = React.useState(() => Date.now());
 
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-
-    return () => clearInterval(interval);
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, []);
 
   /* =========================
@@ -75,10 +46,10 @@ export default function ScoreBoard({
   );
 
   const lastPointTs = React.useMemo(() => {
-    const valid = points?.filter((p) => !p.is_deleted);
-    if (!valid?.length) return null;
+    const valid = points.filter((p) => !p.is_deleted);
+    if (!valid.length) return null;
 
-    const ms = new Date(valid[valid.length - 1].timestamp).getTime();
+    const ms = new Date(valid.at(-1).timestamp).getTime();
     return Number.isFinite(ms) ? ms : null;
   }, [points]);
 
@@ -86,25 +57,20 @@ export default function ScoreBoard({
     score.status === "Terminé" || score.status === "finished";
 
   /* =========================
-     🧮 SAFE DURATION
+     🧮 DURATION SAFE
   ========================= */
-  const safeStart =
-    firstPointTs ??
-    (points?.[0] ? new Date(points[0].timestamp).getTime() : null) ??
-    (score.createdAt?.$date
-      ? new Date(score.createdAt.$date).getTime()
-      : null);
+  const start = firstPointTs;
 
   const rawDuration =
-    safeStart != null
-      ? (isFinished ? lastPointTs ?? now : now) - safeStart
+    start != null
+      ? (isFinished ? lastPointTs ?? now : now) - start
       : 0;
 
   const duration =
     Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
 
   /* =========================
-     ⏱️ FORMAT DURATION
+     ⏱️ FORMAT
   ========================= */
   const formatDuration = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return "00:00";
@@ -117,7 +83,7 @@ export default function ScoreBoard({
   };
 
   /* =========================
-     🧾 FORMAT NAME
+     NAME FORMAT
   ========================= */
   const fmtName = (n) => {
     if (!n) return "?";
@@ -133,8 +99,7 @@ export default function ScoreBoard({
      ROW
   ========================= */
   const Row = ({ who, name, sets_arr, pts }) => {
-    const isPlayer = who === "player";
-    const oppSets = isPlayer ? sO : sP;
+    const oppSets = who === "player" ? sO : sP;
 
     return (
       <div
@@ -143,26 +108,19 @@ export default function ScoreBoard({
           gridTemplateColumns: `18px 1.2fr repeat(${sets}, 44px) 70px`,
         }}
       >
-        {/* SERVICE */}
-        <div className="flex items-center justify-center">
+        <div className="flex justify-center">
           <div
             className={
-              "w-2.5 h-2.5 rounded-full transition-all " +
-              (score.serving === who
-                ? "bg-yellow-400 shadow-[0_0_8px_rgba(255,215,0,0.8)]"
-                : "opacity-0")
+              "w-2.5 h-2.5 rounded-full " +
+              (score.serving === who ? "bg-yellow-400" : "opacity-0")
             }
           />
         </div>
 
-        {/* NAME */}
-        <div className="flex items-center min-w-0 pr-2">
-          <span className="text-sm font-semibold tracking-wide text-white uppercase truncate">
-            {fmtName(name)}
-          </span>
+        <div className="truncate text-white uppercase text-sm font-semibold">
+          {fmtName(name)}
         </div>
 
-        {/* SETS */}
         {sets_arr.map((g, i) => {
           const opp = oppSets[i] || 0;
           const lead = g > opp;
@@ -171,7 +129,7 @@ export default function ScoreBoard({
             <div key={i} className="text-center">
               <span
                 className={
-                  "text-lg font-bold tabular-nums " +
+                  "font-bold tabular-nums " +
                   (lead ? "text-yellow-400" : "text-white/60")
                 }
               >
@@ -181,11 +139,8 @@ export default function ScoreBoard({
           );
         })}
 
-        {/* POINTS */}
-        <div className="pr-2 text-right">
-          <span className="text-2xl font-bold text-yellow-400 tabular-nums">
-            {pts || "0"}
-          </span>
+        <div className="text-right text-yellow-400 font-bold">
+          {pts || "0"}
         </div>
       </div>
     );
@@ -195,24 +150,22 @@ export default function ScoreBoard({
      RENDER
   ========================= */
   return (
-    <div className="w-full max-w-3xl p-4 mx-auto overflow-hidden border border-white/10 rounded-xl bg-gradient-to-b from-black/95 to-black/80 backdrop-blur-md">
+    <div className="w-full max-w-3xl p-4 mx-auto border border-white/10 rounded-xl bg-black/90">
       {/* HEADER */}
       <div
-        className="grid items-center px-3 py-2 text-xs text-white/50 uppercase tracking-[0.2em]"
+        className="grid text-xs text-white/50 uppercase mb-2"
         style={{
           gridTemplateColumns: `18px 1.2fr repeat(${sets}, 44px) 70px`,
         }}
       >
-        <div></div>
+        <div />
         <div>Joueur</div>
-
         {Array.from({ length: sets }).map((_, i) => (
           <div key={i} className="text-center">
             S{i + 1}
           </div>
         ))}
-
-        <div className="text-right">Points</div>
+        <div className="text-right">Pts</div>
       </div>
 
       {/* ROWS */}
@@ -230,15 +183,11 @@ export default function ScoreBoard({
       />
 
       {/* FOOTER */}
-      <div className="px-3 py-2 text-xs text-white/40 bg-black/60 flex justify-between items-center">
+      <div className="flex justify-between text-xs text-white/40 mt-3">
         <span>
-          SET {(score.current_set || 0) + 1} • SERVICE{" "}
-          {score.serving === "player"
-            ? fmtName(playerName)
-            : fmtName(opponentName)}
+          SET {(score.current_set || 0) + 1}
         </span>
 
-        {/* ⏱️ MATCH DURATION */}
         <span className="font-mono text-white/60">
           {formatDuration(duration)}
         </span>

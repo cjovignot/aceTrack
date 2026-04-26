@@ -20,6 +20,7 @@ export default function LiveScorePage() {
   const [match, setMatch] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [serviceFaults, setServiceFaults] = useState(0);
+  const [points, setPoints] = useState([]);
 
   const timer = useRef(null);
 
@@ -34,6 +35,15 @@ export default function LiveScorePage() {
     purple: "border-purple-400 text-purple-400 hover:bg-purple-700/20",
     gray: "border-gray-300 text-gray-300 hover:bg-gray-300/20",
   };
+  
+  async function loadPoints(id) {
+  try {
+    const res = await api.get("/api/points?match_id=" + id);
+    setPoints(res.data || []);
+  } catch (e) {
+    console.error("Failed to load points", e);
+  }
+}
 
   function defineButtonStyle(color) {
     return `bg-transparent border ${buttonStyles[color]} h-18 text-sm rounded-md font-semibold`;
@@ -81,21 +91,28 @@ export default function LiveScorePage() {
 
   // ---------- INIT ----------
   useEffect(() => {
-    const load = matchId
-      ? api.get("/api/matches/" + matchId)
-      : api
-          .get("/api/matches?status=En%20cours&limit=1")
-          .then((r) => ({ data: r.data[0] }));
+  const load = matchId
+    ? api.get("/api/matches/" + matchId)
+    : api
+        .get("/api/matches?status=En%20cours&limit=1")
+        .then((r) => ({ data: r.data[0] }));
 
-    load.then((r) => {
-      setMatch(r.data || null);
-      setLoading(false);
-    });
+  load.then((r) => {
+    const m = r.data || null;
 
-    timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    setMatch(m);
+    setLoading(false);
 
-    return () => clearInterval(timer.current);
-  }, [matchId]);
+    if (m?._id) {
+      loadPoints(m._id); // 👈 IMPORTANT
+    }
+  });
+
+  timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+
+  return () => clearInterval(timer.current);
+}, [matchId]);
+
 
   // ---------- QUEUE ----------
   async function flushQueue() {
@@ -166,6 +183,9 @@ export default function LiveScorePage() {
     flushQueue();
 
     api.patch("/api/matches/" + match._id, optimistic).catch(() => {});
+    
+    loadPoints(match._id);
+    setMatch(optimistic);
   }
 
   // ---------- SERVICE ----------
@@ -277,6 +297,7 @@ export default function LiveScorePage() {
 
       {/* <ScoreBoard
         score={match.score}
+        points={points}
         playerName={formatPlayerName(match.player_name)}
         opponentName={formatPlayerName(match.opponent_name)}
       /> */}
