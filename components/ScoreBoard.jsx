@@ -3,6 +3,8 @@ import React from "react";
 export default function ScoreBoard({
   score,
   points = [],
+  matchStatus,
+  durationMinutes,
   playerName,
   opponentName,
 }) {
@@ -53,9 +55,8 @@ export default function ScoreBoard({
     return Number.isFinite(ms) ? ms : null;
   }, [points]);
 
-  const isFinished =
-    score.status === "Terminé" || score.status === "finished";
-
+  const isFinished = matchStatus === "Terminé";
+  
   /* =========================
      🧮 DURATION SAFE
   ========================= */
@@ -66,8 +67,14 @@ export default function ScoreBoard({
       ? (isFinished ? lastPointTs ?? now : now) - start
       : 0;
 
-  const duration =
-    Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
+const liveDuration =
+  Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
+
+const duration =
+  isFinished && durationMinutes != null
+    ? durationMinutes * 60 * 1000
+    : liveDuration;
+
 
   /* =========================
      ⏱️ FORMAT

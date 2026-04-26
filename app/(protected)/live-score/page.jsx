@@ -298,6 +298,7 @@ export default function LiveScorePage() {
       {/* <ScoreBoard
         score={match.score}
         points={points}
+        matchStatus={match.status}
         playerName={formatPlayerName(match.player_name)}
         opponentName={formatPlayerName(match.opponent_name)}
       /> */}

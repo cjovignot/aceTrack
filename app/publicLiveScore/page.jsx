@@ -99,6 +99,7 @@ export default function PublicLiveScore() {
         <ScoreBoard
           score={match.score}
           points={points} // 👈 CRUCIAL FIX
+          matchStatus={match.status}
           playerName={match.player_name}
           opponentName={match.opponent_name}
         />
