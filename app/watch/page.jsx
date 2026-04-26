@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
-import { IterationCw } from "lucide-react";
+import { IterationCw, Trophy } from "lucide-react";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -553,6 +553,26 @@ export default function WatchPage() {
       >
         <IterationCw size={40} />
       </button>
+
+      {isFinished && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-center px-10 py-8 m-4 text-center border shadow-2xl rounded-2xl bg-white/10 border-white/20 animate-fadeIn">
+            <h1 className="text-3xl font-bold tracking-wide text-yellow-400 uppercase">
+              Match terminé
+            </h1>
+
+            <div className="flex flex-col items-center gap-3 mt-6">
+              <Trophy size={40} className="text-yellow-400 drop-shadow-lg" />
+
+              <h2 className="text-2xl font-semibold text-white">
+                {match.winner === "player"
+                  ? match.player_name
+                  : match.opponent_name}
+              </h2>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
