@@ -4,9 +4,23 @@ import nextPWA from "next-pwa";
 
 const withPWA = nextPWA({
   dest: "public",
+
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development", // pas de PWA en dev
+  clientsClaim: true, // 🔥 important
+
+  runtimeCaching: [
+    {
+      urlPattern: /\/manifest\.json$/,
+      handler: "NetworkFirst", // 🔥 toujours vérifier version serveur
+    },
+    {
+      urlPattern: /\/icons\/.*\.png$/,
+      handler: "NetworkFirst", // 🔥 évite icônes figées
+    },
+  ],
+
+  disable: process.env.NODE_ENV === "development",
 });
 
 const nextConfig = {
