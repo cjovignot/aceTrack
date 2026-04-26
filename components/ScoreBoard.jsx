@@ -73,14 +73,16 @@ export default function ScoreBoard({
      ⏱️ FORMAT
   ========================= */
   const formatDuration = (ms) => {
-    if (!Number.isFinite(ms) || ms <= 0) return "00:00";
+  if (!Number.isFinite(ms) || ms <= 0) return "00:00:00";
 
-    const totalSec = Math.floor(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
+  const totalSec = Math.floor(ms / 1000);
 
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+};
 
   /* =========================
      NAME FORMAT
