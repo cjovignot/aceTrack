@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
+import { IterationCw } from "lucide-react";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -401,6 +402,7 @@ export default function WatchPage() {
 
       <button
         onClick={() => scorePoint("player", "unforced_error", false)}
+        className="!rounded-tl-4xl"
         style={cellBtn("#b32727")}
       >
         Faute
@@ -505,6 +507,7 @@ export default function WatchPage() {
 
       <button
         onClick={() => scorePoint("opponent", "unforced_error", false)}
+        className="!rounded-bl-4xl"
         style={cellBtn("#b32727")}
       >
         Faute
@@ -515,8 +518,12 @@ export default function WatchPage() {
       >
         Gagnant
       </button>
-      <button onClick={handleUndo} style={cellBtn("#afc7f5")}>
-        ↩
+      <button
+        className="!rounded-br-4xl"
+        onClick={handleUndo}
+        style={cellBtn("#afc7f5")}
+      >
+        <IterationCw size={40} />
       </button>
 
       {isFinished && <div>Fin</div>}
