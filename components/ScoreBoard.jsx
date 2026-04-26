@@ -2,7 +2,7 @@ import React from "react";
 
 export default function ScoreBoard({
   score,
-  points = [], // 👈 IMPORTANT : passer les points au composant
+  points = [],
   playerName,
   opponentName,
   compact = false,
@@ -14,24 +14,16 @@ export default function ScoreBoard({
   const sets = Math.max(sP.length, sO.length);
 
   /* =========================
-     ⏱️ FORMAT DURATION
+     🧠 SAFE JSON PARSE
   ========================= */
-  const formatDuration = (ms) => {
-    if (!ms) return "00:00";
+  const parseScore = (p) => {
+    if (!p?.score_at_point) return null;
 
-    const totalSec = Math.floor(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(
-        2,
-        "0"
-      )}`;
+    try {
+      return JSON.parse(p.score_at_point);
+    } catch {
+      return null;
     }
-
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
   /* =========================
@@ -42,23 +34,19 @@ export default function ScoreBoard({
 
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
-      if (!p.score_at_point || p.is_deleted) continue;
+      if (p.is_deleted) continue;
 
-      try {
-        const sc = JSON.parse(p.score_at_point);
+      const sc = parseScore(p);
+      if (!sc) continue;
 
-        const isZeroZero =
-          sc.current_game_player === "0" &&
-          sc.current_game_opponent === "0" &&
-          (sc.sets_player?.[0] || 0) === 0 &&
-          (sc.sets_opponent?.[0] || 0) === 0 &&
-          sc.current_set === 0;
+      const isStart =
+        (sc.sets_player?.[0] ?? 0) === 0 &&
+        (sc.sets_opponent?.[0] ?? 0) === 0 &&
+        (sc.current_set ?? 0) === 0;
 
-        if (isZeroZero) {
-          return new Date(p.timestamp).getTime();
-        }
-      } catch (e) {
-        // ignore JSON errors
+      if (isStart) {
+        const ms = new Date(p.timestamp).getTime();
+        if (Number.isFinite(ms)) return ms;
       }
     }
 
@@ -66,7 +54,7 @@ export default function ScoreBoard({
   };
 
   /* =========================
-     ⏱️ TIME STATE
+     ⏱️ LIVE TIMER
   ========================= */
   const [now, setNow] = React.useState(Date.now());
 
@@ -74,11 +62,12 @@ export default function ScoreBoard({
     const interval = setInterval(() => {
       setNow(Date.now());
     }, 1000);
+
     return () => clearInterval(interval);
   }, []);
 
   /* =========================
-     🧠 COMPUTE TIMESTAMPS
+     🧠 TIMESTAMPS
   ========================= */
   const firstPointTs = React.useMemo(
     () => getMatchStartTimestamp(points),
@@ -88,23 +77,47 @@ export default function ScoreBoard({
   const lastPointTs = React.useMemo(() => {
     const valid = points?.filter((p) => !p.is_deleted);
     if (!valid?.length) return null;
-    return new Date(valid[valid.length - 1].timestamp).getTime();
+
+    const ms = new Date(valid[valid.length - 1].timestamp).getTime();
+    return Number.isFinite(ms) ? ms : null;
   }, [points]);
 
   const isFinished =
     score.status === "Terminé" || score.status === "finished";
 
+  /* =========================
+     🧮 SAFE DURATION
+  ========================= */
   const safeStart =
-    firstPointTs ||
-    (points?.[0] && new Date(points[0].timestamp).getTime()) ||
-    Date.now();
+    firstPointTs ??
+    (points?.[0] ? new Date(points[0].timestamp).getTime() : null) ??
+    (score.createdAt?.$date
+      ? new Date(score.createdAt.$date).getTime()
+      : null);
 
-  const duration = safeStart
-    ? (isFinished ? lastPointTs || now : now) - safeStart
-    : 0;
+  const rawDuration =
+    safeStart != null
+      ? (isFinished ? lastPointTs ?? now : now) - safeStart
+      : 0;
+
+  const duration =
+    Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
 
   /* =========================
-     🎨 FORMAT NAME
+     ⏱️ FORMAT DURATION
+  ========================= */
+  const formatDuration = (ms) => {
+    if (!Number.isFinite(ms) || ms <= 0) return "00:00";
+
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  /* =========================
+     🧾 FORMAT NAME
   ========================= */
   const fmtName = (n) => {
     if (!n) return "?";
@@ -117,7 +130,7 @@ export default function ScoreBoard({
   };
 
   /* =========================
-     🧱 ROW COMPONENT
+     ROW
   ========================= */
   const Row = ({ who, name, sets_arr, pts }) => {
     const isPlayer = who === "player";
@@ -179,7 +192,7 @@ export default function ScoreBoard({
   };
 
   /* =========================
-     🧩 RENDER
+     RENDER
   ========================= */
   return (
     <div className="w-full max-w-3xl p-4 mx-auto overflow-hidden border border-white/10 rounded-xl bg-gradient-to-b from-black/95 to-black/80 backdrop-blur-md">
