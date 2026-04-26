@@ -447,12 +447,21 @@ export default function WatchPage() {
 
         {/* Opponent */}
         <div style={{ fontSize: 22 }}>
-          {setsO.map((s, i) => (
-            <span key={i} style={{ margin: 4 }}>
-              {s}
-            </span>
-          ))}
-          <span style={{ color: "#facc15", fontSize: 28 }}>
+          {setsO.map((s, i) => {
+            const opponentWon = s > setsP[i];
+            return (
+              <span
+                key={i}
+                style={{
+                  margin: 4,
+                  color: opponentWon ? "#facc15" : "#fff",
+                }}
+              >
+                {s}
+              </span>
+            );
+          })}
+          <span className="ml-4" style={{ color: "#facc15", fontSize: 28 }}>
             {score.current_game_opponent || "0"}
           </span>
         </div>
@@ -461,12 +470,21 @@ export default function WatchPage() {
 
         {/* Player */}
         <div style={{ fontSize: 22 }}>
-          {setsP.map((s, i) => (
-            <span key={i} style={{ margin: 4 }}>
-              {s}
-            </span>
-          ))}
-          <span style={{ color: "#facc15", fontSize: 28 }}>
+          {setsP.map((s, i) => {
+            const playerWon = s > setsO[i];
+            return (
+              <span
+                key={i}
+                style={{
+                  margin: 4,
+                  color: playerWon ? "#facc15" : "#fff",
+                }}
+              >
+                {s}
+              </span>
+            );
+          })}
+          <span className="ml-4" style={{ color: "#facc15", fontSize: 28 }}>
             {score.current_game_player || "0"}
           </span>
         </div>
