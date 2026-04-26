@@ -555,17 +555,17 @@ export default function WatchPage() {
       </button>
 
 
-    {isFinished && (
+      {isFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
           <div className="flex flex-col items-center justify-center px-8 py-8 m-4 text-center border shadow-2xl rounded-2xl bg-white/10 border-white/20 animate-fadeIn">
-            <h1 className="text-2xl font-bold tracking-wide text-yellow-400 uppercase">
+            <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
               Match terminé
             </h1>
 
             <div className="flex flex-col items-center gap-3 mt-6">
               <Trophy size={40} className="text-yellow-400 drop-shadow-lg" />
 
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-lg font-semibold text-white">
                 {match.winner === "player"
                   ? match.player_name
                   : match.opponent_name}
@@ -574,5 +574,6 @@ export default function WatchPage() {
           </div>
         </div>
       )}
+    </div>
   );
 }
