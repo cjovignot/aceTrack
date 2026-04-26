@@ -4,17 +4,24 @@ import { AuthProvider } from "../context/AuthContext";
 export const metadata = {
   title: "aceTrack",
   description: "Score en direct",
-
   manifest: "/manifest.json",
+
+  icons: {
+    icon: "/icons/icon-512.png",
+    apple: "/icons/icon-512.png",
+    shortcut: "/icons/icon-512.png",
+    other: [
+      {
+        rel: "apple-touch-icon",
+        url: "/icons/icon-512.png",
+      },
+    ],
+  },
 
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "aceTrack",
-  },
-
-  icons: {
-    apple: "/icons/icon-512.png",
   },
 };
 
