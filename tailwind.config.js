@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       borderRadius: {
-        "4xl": "3rem",
+        "4xl": "3.2rem",
       },
     },
   },
