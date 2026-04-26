@@ -373,31 +373,6 @@ export default function WatchPage() {
         padding: 3,
       }}
     >
-      {/* OVERLAY FIN MATCH */}
-      {isFinished && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.85)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-        >
-          <div style={{ fontSize: 26, color: "#facc15" }}>
-            Match terminé
-          </div>
-
-          {winnerLabel && (
-            <div style={{ marginTop: 10, fontSize: 20 }}>
-              Vainqueur : {winnerLabel}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* QR CONNECT */}
       {!isConnected && pairingToken && (
@@ -566,9 +541,7 @@ export default function WatchPage() {
               <Trophy size={40} className="text-yellow-400 drop-shadow-lg" />
 
               <h2 className="text-lg font-semibold text-white">
-                {match.winner === "player"
-                  ? match.player_name
-                  : match.opponent_name}
+                {winnerLabel && winnerLabel}
               </h2>
             </div>
           </div>
