@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
 import { IterationCw, Trophy } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -416,7 +416,7 @@ export default function WatchPage() {
           }}
         >
           <div className="p-3 border border-green-400 rounded-xl">
-            <QRCodeSVG
+            <QRCodeCanvas
               value={`${window.location.origin}/connect?token=${pairingToken}`}
               size={200}
               level="H"
