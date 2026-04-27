@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
 import { IterationCw, Trophy } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -416,16 +415,15 @@ export default function WatchPage() {
           }}
         >
           <div className="p-3 border border-green-400 rounded-xl">
-            <QRCodeCanvas
-              value={`${window.location.origin}/connect?token=${pairingToken}`}
-              size={200}
-              level="H"
-              fgColor="#ffffff"
-              bgColor="#000000"
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                `${window.location.origin}/connect?token=${pairingToken}`,
+              )}`}
+              width={210}
             />
           </div>
 
-          <p className="w-3/4 mb-2 text-xs text-center text-green-400">
+          <p className="w-3/4 text-xs text-center text-green-400">
             Scannez pour connecter la montre et saisir les scores
           </p>
         </div>
