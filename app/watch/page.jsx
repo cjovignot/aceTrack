@@ -60,28 +60,26 @@ export default function WatchPage() {
 
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
-    const meta = document.querySelector("meta[name=viewport]");
-    const previous = meta?.getAttribute("content");
+    const html = document.documentElement;
+    const body = document.body;
 
-    if (meta) {
-      meta.setAttribute(
-        "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-      );
-    }
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlTouch = html.style.touchAction;
+    const prevBodyTouch = body.style.touchAction;
 
-    // ✅ BLOQUE LE SCROLL
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    // 🔥 bloque complètement le scroll + gestures
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
 
-    document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "top left";
+    html.style.touchAction = "none";
+    body.style.touchAction = "none";
 
     return () => {
-      if (meta && previous) meta.setAttribute("content", previous);
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-      document.body.style.transform = "";
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      html.style.touchAction = prevHtmlTouch;
+      body.style.touchAction = prevBodyTouch;
     };
   }, []);
 
@@ -394,14 +392,12 @@ export default function WatchPage() {
         left: 0,
         width: "100vw",
         height: "100vh",
-        overflow: "hidden",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
         gap: 3,
         padding: 3,
         touchAction: "manipulation",
-        boxSizing: "border-box",
       }}
     >
       {/* QR CONNECT */}
