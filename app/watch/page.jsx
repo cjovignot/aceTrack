@@ -404,6 +404,7 @@ export default function WatchPage() {
         boxSizing: "border-box",
       }}
     >
+      {/* push */}
       {/* QR CONNECT */}
       {!isConnected && pairingToken && (
         <div
