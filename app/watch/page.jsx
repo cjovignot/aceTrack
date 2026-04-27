@@ -59,6 +59,12 @@ export default function WatchPage() {
 
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
+  
+  useEffect(() => {
+  window.scrollTo({
+    top: document.body.scrollHeight,
+  });
+}, []);
 
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
@@ -392,7 +398,7 @@ export default function WatchPage() {
         top: 0,
         left: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
