@@ -58,6 +58,27 @@ export default function WatchPage() {
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
+  // ✅ FIX WATCH (viewport + scale)
+  useEffect(() => {
+    const meta = document.querySelector("meta[name=viewport]");
+    const previous = meta?.getAttribute("content");
+
+    if (meta) {
+      meta.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      );
+    }
+
+    document.body.style.transform = "scale(1)";
+    document.body.style.transformOrigin = "top left";
+
+    return () => {
+      if (meta && previous) meta.setAttribute("content", previous);
+      document.body.style.transform = "";
+    };
+  }, []);
+
   // ---------- INIT ----------
   useEffect(() => {
     if (hasStarted.current) return;
@@ -328,7 +349,8 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver = match.score.serving === "player" ? "opponent" : "player";
+      const receiver =
+        match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver, "double_fault", false);
     }
   }
@@ -340,7 +362,6 @@ export default function WatchPage() {
   const serving = score.serving;
   const serveSide = getServeSide(score);
 
-  // 🔥 SERVER INDICATOR RESTAURÉ (TON CODE ORIGINAL)
   const cellBtn = (bg, active = false) => ({
     background: active ? bg : "transparent",
     color: active ? "#dad11f" : bg,
@@ -363,21 +384,28 @@ export default function WatchPage() {
       style={{
         background: "#000",
         color: "#fff",
-        position: "fixed",
-        inset: 0,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
         gap: 3,
         padding: 3,
+        touchAction: "manipulation",
       }}
     >
       {/* QR CONNECT */}
       {!isConnected && pairingToken && (
         <div
           style={{
-            position: "fixed",
-            inset: 0,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
             zIndex: 9999,
             background: "#000",
             display: "flex",
@@ -528,7 +556,7 @@ export default function WatchPage() {
       </button>
 
       {isFinished && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
           <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
             <div className="grid gap-10">
               <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
@@ -536,7 +564,6 @@ export default function WatchPage() {
               </h1>
               <div className="grid gap-3">
                 <p className="text-7xl">🏆</p>
-                {/* <Trophy size={50} className="text-yellow-400 drop-shadow-lg" /> */}
                 <h2 className="text-lg font-semibold text-gray-300">
                   {winnerLabel && winnerLabel}
                 </h2>
