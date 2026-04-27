@@ -71,8 +71,8 @@ export default function WatchPage() {
     }
 
     // ✅ BLOQUE LE SCROLL
-    // document.documentElement.style.overflow = "hidden";
-    // document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
 
     document.body.style.transform = "scale(1)";
     document.body.style.transformOrigin = "top left";
@@ -393,8 +393,8 @@ export default function WatchPage() {
         top: 0,
         left: 0,
         width: "100vw",
-        height: "100dvh",
-        // overflow: "hidden",
+        height: "100vh",
+        overflow: "hidden",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
