@@ -61,9 +61,15 @@ export default function WatchPage() {
   const sendingRef = useRef(false);
   
   useEffect(() => {
-  window.scrollTo({
-    top: document.body.scrollHeight,
-  });
+  const fix = () => {
+    window.scrollTo(0, 0);
+    document.documentElement.style.height = "100%";
+    document.body.style.height = "100%";
+  };
+
+  fix();
+  setTimeout(fix, 50);
+  setTimeout(fix, 200);
 }, []);
 
   // ✅ FIX WATCH (viewport + scale)
@@ -397,8 +403,9 @@ export default function WatchPage() {
         position: "absolute",
         top: 0,
         left: 0,
-        width: "100vw",
+        width: "100%",
         height: "100dvh",
+        overflow: "hidden",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
