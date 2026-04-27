@@ -42,6 +42,8 @@ export default function WatchPage() {
   const historyRef = useRef([]);
   const undoLockRef = useRef(false);
 
+  const [isReady, setIsReady] = useState(false);
+
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -89,6 +91,7 @@ export default function WatchPage() {
   // ---------- LOAD MATCH ----------
   useEffect(() => {
     if (!matchId) return;
+    if (!isReady) return;
 
     async function loadMatch() {
       const res = await fetch(`/api/matches/${matchId}`, {
@@ -147,6 +150,7 @@ export default function WatchPage() {
       if (data.connected && data.match_id) {
         setIsConnected(true);
         setMatchId(data.match_id);
+        setIsReady(true); // 👈 AJOUT IMPORTANT
 
         clearInterval(pairingIntervalRef.current);
         pairingIntervalRef.current = null;
@@ -156,6 +160,7 @@ export default function WatchPage() {
 
   function startMatchPolling(id) {
     if (matchIntervalRef.current) return;
+    if (!isReady) return;
 
     matchIntervalRef.current = setInterval(async () => {
       const res = await fetch(`/api/matches/${id}`, {
@@ -397,7 +402,7 @@ export default function WatchPage() {
       }}
     >
       {/* QR CONNECT */}
-      {!isConnected && pairingToken && (
+      {!isReady && pairingToken && (
         <div
           style={{
             position: "absolute",
@@ -423,153 +428,156 @@ export default function WatchPage() {
             />
           </div>
 
-          <p className="w-3/4 text-xs text-center text-green-400">
+          <p className="w-3/4 pb-2 text-xs text-center text-green-400">
             Scannez pour connecter la montre et saisir les scores
           </p>
         </div>
       )}
 
       {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
+      {isReady && (
+        <>
+          <button
+            onClick={() => scorePoint("player", "unforced_error", false)}
+            className="!rounded-tl-4xl"
+            style={cellBtn("#b32727")}
+          >
+            Faute
+          </button>
 
-      <button
-        onClick={() => scorePoint("player", "unforced_error", false)}
-        className="!rounded-tl-4xl"
-        style={cellBtn("#b32727")}
-      >
-        Faute
-      </button>
+          <button
+            onClick={() => scorePoint("opponent", "winner", true)}
+            style={cellBtn("#6296da")}
+          >
+            Gagnant
+          </button>
 
-      <button
-        onClick={() => scorePoint("opponent", "winner", true)}
-        style={cellBtn("#6296da")}
-      >
-        Gagnant
-      </button>
+          <div />
 
-      <div />
-
-      {/* 🔥 SERVER INDICATOR RESTAURÉ */}
-      <div
-        style={{
-          gridColumn: "1 / 3",
-          gridRow: "2 / 4",
-          background: "#0a0a0a",
-          borderRadius: 6,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          position: "relative",
-          gap: 4,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: "#facc15",
-            ...(serving === "player"
-              ? serveSide === "deuce"
-                ? { bottom: 5, right: 5 }
-                : { bottom: 5, left: 5 }
-              : serveSide === "deuce"
-                ? { top: 5, left: 5 }
-                : { top: 5, right: 5 }),
-          }}
-        />
-
-        <div style={{ fontSize: 22 }}>
-          {setsO.map((s, i) => (
-            <span
-              key={i}
+          {/* 🔥 SERVER INDICATOR RESTAURÉ */}
+          <div
+            style={{
+              gridColumn: "1 / 3",
+              gridRow: "2 / 4",
+              background: "#0a0a0a",
+              borderRadius: 6,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              position: "relative",
+              gap: 4,
+            }}
+          >
+            <div
               style={{
-                margin: 4,
-                color: s > setsP[i] ? "#facc15" : "#fff",
+                position: "absolute",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: "#facc15",
+                ...(serving === "player"
+                  ? serveSide === "deuce"
+                    ? { bottom: 5, right: 5 }
+                    : { bottom: 5, left: 5 }
+                  : serveSide === "deuce"
+                    ? { top: 5, left: 5 }
+                    : { top: 5, right: 5 }),
               }}
-            >
-              {s}
-            </span>
-          ))}
-          <span style={{ color: "#facc15", fontSize: 28 }}>
-            {score.current_game_opponent || "0"}
-          </span>
-        </div>
+            />
 
-        <div style={{ width: "70%", height: 1, background: "#222" }} />
+            <div style={{ fontSize: 22 }}>
+              {setsO.map((s, i) => (
+                <span
+                  key={i}
+                  style={{
+                    margin: 4,
+                    color: s > setsP[i] ? "#facc15" : "#fff",
+                  }}
+                >
+                  {s}
+                </span>
+              ))}
+              <span style={{ color: "#facc15", fontSize: 28 }}>
+                {score.current_game_opponent || "0"}
+              </span>
+            </div>
 
-        <div style={{ fontSize: 22 }}>
-          {setsP.map((s, i) => (
-            <span
-              key={i}
-              style={{
-                margin: 4,
-                color: s > setsO[i] ? "#facc15" : "#fff",
-              }}
-            >
-              {s}
-            </span>
-          ))}
-          <span style={{ color: "#facc15", fontSize: 28 }}>
-            {score.current_game_player || "0"}
-          </span>
-        </div>
-      </div>
+            <div style={{ width: "70%", height: 1, background: "#222" }} />
 
-      <button
-        onClick={handleServiceFault}
-        style={serviceFaults > 0 ? cellBtn("#ed640f") : cellBtn("#ec9720")}
-      >
-        {serviceFaults > 0 ? "Double Faute" : "Faute service"}
-      </button>
-
-      <button
-        onClick={() => scorePoint(serving, "ace", true)}
-        style={cellBtn("#e2e629")}
-      >
-        Ace
-      </button>
-
-      <button
-        onClick={() => scorePoint("opponent", "unforced_error", false)}
-        className="!rounded-bl-4xl"
-        style={cellBtn("#b32727")}
-      >
-        Faute
-      </button>
-
-      <button
-        onClick={() => scorePoint("player", "winner", true)}
-        style={cellBtn("#269351")}
-      >
-        Gagnant
-      </button>
-
-      <button
-        className="!rounded-br-4xl"
-        onClick={handleUndo}
-        style={cellBtn("#afc7f5")}
-      >
-        <IterationCw size={40} />
-      </button>
-
-      {isFinished && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
-          <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
-            <div className="grid gap-10">
-              <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
-                Match terminé
-              </h1>
-              <div className="grid gap-3">
-                <p className="text-7xl">🏆</p>
-                <h2 className="text-lg font-semibold text-gray-300">
-                  {winnerLabel && winnerLabel}
-                </h2>
-              </div>
+            <div style={{ fontSize: 22 }}>
+              {setsP.map((s, i) => (
+                <span
+                  key={i}
+                  style={{
+                    margin: 4,
+                    color: s > setsO[i] ? "#facc15" : "#fff",
+                  }}
+                >
+                  {s}
+                </span>
+              ))}
+              <span style={{ color: "#facc15", fontSize: 28 }}>
+                {score.current_game_player || "0"}
+              </span>
             </div>
           </div>
-        </div>
+
+          <button
+            onClick={handleServiceFault}
+            style={serviceFaults > 0 ? cellBtn("#ed640f") : cellBtn("#ec9720")}
+          >
+            {serviceFaults > 0 ? "Double Faute" : "Faute service"}
+          </button>
+
+          <button
+            onClick={() => scorePoint(serving, "ace", true)}
+            style={cellBtn("#e2e629")}
+          >
+            Ace
+          </button>
+
+          <button
+            onClick={() => scorePoint("opponent", "unforced_error", false)}
+            className="!rounded-bl-4xl"
+            style={cellBtn("#b32727")}
+          >
+            Faute
+          </button>
+
+          <button
+            onClick={() => scorePoint("player", "winner", true)}
+            style={cellBtn("#269351")}
+          >
+            Gagnant
+          </button>
+
+          <button
+            className="!rounded-br-4xl"
+            onClick={handleUndo}
+            style={cellBtn("#afc7f5")}
+          >
+            <IterationCw size={40} />
+          </button>
+
+          {isFinished && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
+              <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
+                <div className="grid gap-10">
+                  <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
+                    Match terminé
+                  </h1>
+                  <div className="grid gap-3">
+                    <p className="text-7xl">🏆</p>
+                    <h2 className="text-lg font-semibold text-gray-300">
+                      {winnerLabel && winnerLabel}
+                    </h2>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
