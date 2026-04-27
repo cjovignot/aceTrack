@@ -66,15 +66,21 @@ export default function WatchPage() {
     if (meta) {
       meta.setAttribute(
         "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
       );
     }
+
+    // ✅ BLOQUE LE SCROLL
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
 
     document.body.style.transform = "scale(1)";
     document.body.style.transformOrigin = "top left";
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
       document.body.style.transform = "";
     };
   }, []);
@@ -349,8 +355,7 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver =
-        match.score.serving === "player" ? "opponent" : "player";
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver, "double_fault", false);
     }
   }
@@ -388,13 +393,15 @@ export default function WatchPage() {
         top: 0,
         left: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
+        overflow: "hidden",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
         gap: 3,
         padding: 3,
         touchAction: "manipulation",
+        boxSizing: "border-box",
       }}
     >
       {/* QR CONNECT */}
