@@ -60,26 +60,22 @@ export default function WatchPage() {
 
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
+    const meta = document.querySelector("meta[name=viewport]");
+    const previous = meta?.getAttribute("content");
 
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    const prevHtmlTouch = html.style.touchAction;
-    const prevBodyTouch = body.style.touchAction;
+    if (meta) {
+      meta.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+      );
+    }
 
-    // 🔥 bloque complètement le scroll + gestures
-    html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
-
-    html.style.touchAction = "none";
-    body.style.touchAction = "none";
+    document.body.style.transform = "scale(1)";
+    document.body.style.transformOrigin = "top left";
 
     return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-      html.style.touchAction = prevHtmlTouch;
-      body.style.touchAction = prevBodyTouch;
+      if (meta && previous) meta.setAttribute("content", previous);
+      document.body.style.transform = "";
     };
   }, []);
 
