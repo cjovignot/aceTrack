@@ -328,8 +328,7 @@ export default function WatchPage() {
     if (serviceFaults === 0) {
       setServiceFaults(1);
     } else {
-      const receiver =
-        match.score.serving === "player" ? "opponent" : "player";
+      const receiver = match.score.serving === "player" ? "opponent" : "player";
       scorePoint(receiver, "double_fault", false);
     }
   }
@@ -373,7 +372,6 @@ export default function WatchPage() {
         padding: 3,
       }}
     >
-
       {/* QR CONNECT */}
       {!isConnected && pairingToken && (
         <div
@@ -529,20 +527,20 @@ export default function WatchPage() {
         <IterationCw size={40} />
       </button>
 
-
       {isFinished && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-          <div className="flex flex-col items-center justify-center px-8 py-8 m-4 text-center border shadow-2xl rounded-2xl bg-white/10 border-white/20 animate-fadeIn">
-            <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
-              Match terminé
-            </h1>
-
-            <div className="flex flex-col items-center gap-3 mt-6">
-              <Trophy size={40} className="text-yellow-400 drop-shadow-lg" />
-
-              <h2 className="text-lg font-semibold text-white">
-                {winnerLabel && winnerLabel}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
+            <div className="grid gap-10">
+              <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
+                Match terminé
+              </h1>
+              <div className="grid gap-3">
+                <p className="text-7xl">🏆</p>
+                {/* <Trophy size={50} className="text-yellow-400 drop-shadow-lg" /> */}
+                <h2 className="text-lg font-semibold text-gray-300">
+                  {winnerLabel && winnerLabel}
+                </h2>
+              </div>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ import {
   getServer,
 } from "../../../lib/tennisScoring";
 import ScoreBoard from "../../../components/ScoreBoard";
-import { ArrowLeft, Timer, Undo2, Trophy, X } from "lucide-react";
+import { ArrowLeft, Timer, Undo2, Trophy, X, RotateCcw } from "lucide-react";
 import { div } from "framer-motion/client";
 
 export default function LiveScorePage() {
@@ -27,6 +27,7 @@ export default function LiveScorePage() {
   const historyRef = useRef([]);
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
+  const isMatchFinishedRef = useRef(false);
 
   const buttonStyles = {
     red: "border-red-700 text-red-700 hover:bg-red-700/20",
@@ -35,18 +36,18 @@ export default function LiveScorePage() {
     purple: "border-purple-400 text-purple-400 hover:bg-purple-700/20",
     gray: "border-gray-300 text-gray-300 hover:bg-gray-300/20",
   };
-  
+
   async function loadPoints(id) {
-  try {
-    const res = await api.get("/api/points?match_id=" + id);
-    setPoints(res.data || []);
-  } catch (e) {
-    console.error("Failed to load points", e);
+    try {
+      const res = await api.get("/api/points?match_id=" + id);
+      setPoints(res.data || []);
+    } catch (e) {
+      console.error("Failed to load points", e);
+    }
   }
-}
 
   function defineButtonStyle(color) {
-    return `bg-transparent border ${buttonStyles[color]} h-18 text-sm rounded-md font-semibold`;
+    return `bg-transparent border ${buttonStyles[color]} h-12 text-sm rounded-md font-semibold`;
   }
 
   function getPointContext(score) {
@@ -91,35 +92,46 @@ export default function LiveScorePage() {
 
   // ---------- INIT ----------
   useEffect(() => {
-  const load = matchId
-    ? api.get("/api/matches/" + matchId)
-    : api
-        .get("/api/matches?status=En%20cours&limit=1")
-        .then((r) => ({ data: r.data[0] }));
+    const load = matchId
+      ? api.get("/api/matches/" + matchId)
+      : api
+          .get("/api/matches?status=En%20cours&limit=1")
+          .then((r) => ({ data: r.data[0] }));
 
-  load.then((r) => {
-    const m = r.data || null;
+    load.then((r) => {
+      const m = r.data || null;
 
-    setMatch(m);
-    setLoading(false);
+      setMatch(m);
+      setLoading(false);
 
-    if (m?._id) {
-      loadPoints(m._id); // 👈 IMPORTANT
-    }
-  });
+      if (m?._id) {
+        loadPoints(m._id); // 👈 IMPORTANT
+      }
+    });
 
-  timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    timer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
 
-  return () => clearInterval(timer.current);
-}, [matchId]);
+    return () => clearInterval(timer.current);
+  }, [matchId]);
 
+  // ---------- BLOCK FINISHED ----------
+  const isFinished = match?.status === "Terminé";
+
+  const winnerLabel =
+    match?.winner === "player"
+      ? match.player_name
+      : match?.winner === "opponent"
+        ? match.opponent_name
+        : null;
 
   // ---------- QUEUE ----------
   async function flushQueue() {
     if (sendingRef.current) return;
     if (queueRef.current.length === 0) return;
+    if (isMatchFinishedRef.current) return; // ✅ SEUL CHECK FIABLE
 
     sendingRef.current = true;
+
     const item = queueRef.current.shift();
 
     try {
@@ -129,12 +141,15 @@ export default function LiveScorePage() {
     }
 
     sendingRef.current = false;
-    setTimeout(flushQueue, 0);
+
+    if (!isMatchFinishedRef.current && queueRef.current.length > 0) {
+      setTimeout(flushQueue, 0);
+    }
   }
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
-    if (!match || !match.score) return;
+    if (!match || !match.score || isMatchFinishedRef.current) return;
 
     setServiceFaults(0);
 
@@ -168,6 +183,10 @@ export default function LiveScorePage() {
 
     if (result.matchWon) {
       clearInterval(timer.current);
+
+      // ✅ STOP GLOBAL
+      isMatchFinishedRef.current = true;
+      queueRef.current = [];
     }
 
     queueRef.current.push({
@@ -183,9 +202,7 @@ export default function LiveScorePage() {
     flushQueue();
 
     api.patch("/api/matches/" + match._id, optimistic).catch(() => {});
-    
     loadPoints(match._id);
-    setMatch(optimistic);
   }
 
   // ---------- SERVICE ----------
@@ -303,177 +320,154 @@ export default function LiveScorePage() {
         opponentName={formatPlayerName(match.opponent_name)}
       /> */}
 
-      {match.status !== "Terminé" ? (
-        <div className="grid grid-cols-4 grid-rows-3 gap-1">
-          <button
-            onClick={() => scorePoint("player", "unforced_error", false)}
-            className={defineButtonStyle("red")}
-          >
-            Faute
-          </button>
+      <div className="relative flex flex-col justify-center h-full col-span-2 row-span-2 p-3 bg-black rounded-md">
+        {/* SERVE INDICATOR */}
+        <div
+          className={`absolute w-2 h-2 rounded-full bg-yellow-400 ${
+            server === "opponent"
+              ? side === "deuce"
+                ? "top-2 left-2"
+                : "top-2 right-2"
+              : side === "deuce"
+                ? "bottom-2 right-2"
+                : "bottom-2 left-2"
+          }`}
+        />
+        {/* PLAYER ROW */}
+        {/* OPPONENT ROW */}
+        <div className="grid items-center grid-cols-5 py-1 text-lg">
+          {/* NAME LEFT */}
 
-          <div className="relative flex flex-col justify-center h-full col-span-2 row-span-2 p-3 bg-black rounded-md">
-            {/* SERVE INDICATOR */}
-            <div
-              className={`absolute w-2 h-2 rounded-full bg-yellow-400 ${
-                server === "opponent"
-                  ? side === "deuce"
-                    ? "top-2 left-2"
-                    : "top-2 right-2"
-                  : side === "deuce"
-                    ? "bottom-2 right-2"
-                    : "bottom-2 left-2"
-              }`}
-            />
-            {/* PLAYER ROW */}
-            {/* OPPONENT ROW */}
-            <div className="grid items-center grid-cols-5 py-1 text-lg">
-              {/* NAME LEFT */}
+          <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
+            {formatPlayerName(match.opponent_name)}
+          </span>
+          {/* SCORES */}
 
-              <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
-                {formatPlayerName(match.opponent_name)}
-              </span>
-              {/* SCORES */}
+          <div className="flex items-center justify-end col-span-2 gap-3">
+            {(match.score.sets_opponent || []).map((s, i) => {
+              const player = match.score.sets_player?.[i];
+              const isWinner = s > player;
 
-              <div className="flex items-center justify-end col-span-2 gap-3">
-                {(match.score.sets_opponent || []).map((s, i) => {
-                  const player = match.score.sets_player?.[i];
-                  const isWinner = s > player;
-
-                  return (
-                    <span
-                      key={i}
-                      className={`text-sm ${
-                        isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
-                      }`}
-                    >
-                      {s}
-                    </span>
-                  );
-                })}
-              </div>
-
-              <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
-                {match.score.current_game_opponent || "0"}
-              </span>
-            </div>
-
-            {/* DIVIDER */}
-            <div className="w-full h-px my-5 bg-gray-700" />
-
-            <div className="grid items-center grid-cols-5 py-1 text-lg">
-              {/* NAME LEFT */}
-              <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
-                {formatPlayerName(match.player_name)}
-              </span>
-
-              {/* SCORES */}
-              <div className="flex items-center justify-end col-span-2 gap-2">
-                {(match.score.sets_player || []).map((s, i) => {
-                  const opp = match.score.sets_opponent?.[i];
-                  const isWinner = s > opp;
-
-                  return (
-                    <span
-                      key={i}
-                      className={`text-sm ${
-                        isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
-                      }`}
-                    >
-                      {s}
-                    </span>
-                  );
-                })}
-              </div>
-              <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
-                {match.score.current_game_player || "0"}
-              </span>
-            </div>
+              return (
+                <span
+                  key={i}
+                  className={`text-sm ${
+                    isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
+                  }`}
+                >
+                  {s}
+                </span>
+              );
+            })}
           </div>
 
-          {pointContext === "deuce" ? (
-            <>
-              <button
-                onClick={() => scorePoint("opponent", "winner", true)}
-                className={defineButtonStyle("green")}
-              >
-                Avantage
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => scorePoint("opponent", "winner", true)}
-              className={defineButtonStyle("green")}
-            >
-              Gagnant
-            </button>
-          )}
-
-          <button
-            onClick={() => scorePoint("opponent", "unforced_error", false)}
-            className={defineButtonStyle("red")}
-          >
-            Faute
-          </button>
-
-          {pointContext === "deuce" ? (
-            <>
-              <button
-                onClick={() => scorePoint("player", "winner", true)}
-                className={defineButtonStyle("green")}
-              >
-                Avantage
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => scorePoint("player", "winner", true)}
-              className={defineButtonStyle("green")}
-            >
-              Gagnant
-            </button>
-          )}
-
-          <button
-            onClick={handleUndo}
-            className={`${defineButtonStyle("gray")} col-span-2`}
-          >
-            ↩ Annuler
-          </button>
-
-          <button
-            onClick={handleServiceFault}
-            className={defineButtonStyle("orange")}
-          >
-            {serviceFaults === 1 ? "Double Faute" : "Service"}
-          </button>
-
-          <button
-            onClick={() => scorePoint(server, "ace", true)}
-            className={defineButtonStyle("purple")}
-          >
-            Ace
-          </button>
+          <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
+            {match.score.current_game_opponent || "0"}
+          </span>
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <p className="mb-2 text-sm text-gray-400">Match terminé</p>
 
-          <div className="flex gap-2">
-            {match.winner === "player" ? (
-              <>
-                <Trophy className="text-yellow-400" />{" "}
-              </>
-            ) : (
-              <>
-                <X className="text-red-700" />
-              </>
-            )}
-            <p className="text-2xl font-bold text-yellow-400">
-              {match.winner === "player"
-                ? formatPlayerName(match.player_name)
-                : formatPlayerName(match.opponent_name)}
-            </p>
+        {/* DIVIDER */}
+        <div className="w-full h-px my-3 bg-gray-700" />
+
+        <div className="grid items-center grid-cols-5 py-1 text-lg">
+          {/* NAME LEFT */}
+          <span className="col-span-2 text-sm font-semibold truncate text-cyan-300/80">
+            {formatPlayerName(match.player_name)}
+          </span>
+
+          {/* SCORES */}
+          <div className="flex items-center justify-end col-span-2 gap-2">
+            {(match.score.sets_player || []).map((s, i) => {
+              const opp = match.score.sets_opponent?.[i];
+              const isWinner = s > opp;
+
+              return (
+                <span
+                  key={i}
+                  className={`text-sm ${
+                    isWinner ? "text-yellow-400 font-bold" : "text-gray-300"
+                  }`}
+                >
+                  {s}
+                </span>
+              );
+            })}
+          </div>
+          <span className="col-span-1 text-lg font-bold text-right text-yellow-400">
+            {match.score.current_game_player || "0"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mt-2">
+        {/* ROW 1 */}
+        <button
+          onClick={() => scorePoint("opponent", "unforced_error", false)}
+          className={defineButtonStyle("red")}
+        >
+          Faute
+        </button>
+
+        <button
+          onClick={() => scorePoint("opponent", "winner", true)}
+          className={defineButtonStyle("green")}
+        >
+          {pointContext === "deuce" ? "Avantage" : "Gagnant"}
+        </button>
+
+        <button
+          onClick={handleServiceFault}
+          className={defineButtonStyle("orange")}
+        >
+          {serviceFaults === 1 ? "Double Faute" : "Service"}
+        </button>
+
+        {/* UNDO (span 2 rows) */}
+        <button
+          onClick={handleUndo}
+          className={`${defineButtonStyle("gray")} row-span-2 flex justify-center items-center`}
+        >
+          <RotateCcw size={28} />
+        </button>
+
+        {/* ROW 2 */}
+        <button
+          onClick={() => scorePoint("player", "unforced_error", false)}
+          className={defineButtonStyle("red")}
+        >
+          Faute
+        </button>
+
+        <button
+          onClick={() => scorePoint("player", "winner", true)}
+          className={defineButtonStyle("green")}
+        >
+          {pointContext === "deuce" ? "Avantage" : "Gagnant"}
+        </button>
+
+        <button
+          onClick={() => scorePoint(server, "ace", true)}
+          className={defineButtonStyle("purple")}
+        >
+          Ace
+        </button>
+      </div>
+
+      {isFinished && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/30 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-around py-5 m-3 text-center border shadow-2xl w-fit h-fit px-7 rounded-xl bg-white/10 border-white/20 animate-fadeIn">
+            <div className="grid gap-10">
+              <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
+                Match terminé
+              </h1>
+              <div className="grid gap-3">
+                <p className="text-7xl">🏆</p>
+                {/* <Trophy size={50} className="text-yellow-400 drop-shadow-lg" /> */}
+                <h2 className="text-lg font-semibold text-gray-300">
+                  {winnerLabel && winnerLabel}
+                </h2>
+              </div>
+            </div>
           </div>
         </div>
       )}
