@@ -73,7 +73,7 @@ export default function WatchPage() {
     }
 
     document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "bottom left";
+    document.body.style.transformOrigin = "top left";
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
@@ -419,18 +419,18 @@ export default function WatchPage() {
             gap: 8,
           }}
         >
-          <div className="p-3 border border-green-400 rounded-xl">
+          <div className="flex flex-col items-center gap-2">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
                 `${window.location.origin}/connect?token=${pairingToken}`,
               )}`}
               width={210}
+              className="p-4 border border-green-400 rounded-xl"
             />
+            <p className="w-3/4 pb-3 text-sm text-center text-green-400">
+              Scannez pour connecter la montre et saisir les scores
+            </p>
           </div>
-
-          <p className="w-3/4 pb-2 text-xs text-center text-green-400">
-            Scannez pour connecter la montre et saisir les scores
-          </p>
         </div>
       )}
 
