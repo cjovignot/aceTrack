@@ -59,31 +59,6 @@ export default function WatchPage() {
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
-  useEffect(() => {
-    let startY = 0;
-
-    const onTouchStart = (e) => {
-      startY = e.touches[0].clientY;
-    };
-
-    const onTouchMove = (e) => {
-      const currentY = e.touches[0].clientY;
-
-      // 🔥 bloque TOUJOURS le scroll vertical
-      if (Math.abs(currentY - startY) > 2) {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener("touchstart", onTouchStart, { passive: false });
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-
-    return () => {
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchmove", onTouchMove);
-    };
-  }, []);
-
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
     const meta = document.querySelector("meta[name=viewport]");
@@ -96,34 +71,12 @@ export default function WatchPage() {
       );
     }
 
-    const applyScale = () => {
-      const realWidth = window.innerWidth;
-      const realHeight = window.innerHeight;
-
-      const designWidth = 300; // ta grille logique
-      const designHeight = 400;
-
-      const scale = Math.min(
-        realWidth / designWidth,
-        realHeight / designHeight,
-      );
-
-      document.body.style.transform = `scale(${scale})`;
-      document.body.style.transformOrigin = "top left";
-
-      document.body.style.width = `${designWidth}px`;
-      document.body.style.height = `${designHeight}px`;
-    };
-
-    applyScale();
-    window.addEventListener("resize", applyScale);
+    document.body.style.transform = "scale(1)";
+    document.body.style.transformOrigin = "top left";
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
       document.body.style.transform = "";
-      document.body.style.width = "";
-      document.body.style.height = "";
-      window.removeEventListener("resize", applyScale);
     };
   }, []);
 
@@ -462,17 +415,17 @@ export default function WatchPage() {
             gap: 8,
           }}
         >
-          <div className="p-3 border-2 border-[#22c55e] rounded-xl">
+          <div className="p-3 border border-green-400 rounded-xl">
             <QRCodeSVG
               value={`${window.location.origin}/connect?token=${pairingToken}`}
-              size={210}
-              bgColor="#000000"
-              fgColor="#ffffff"
+              size={200}
               level="H"
+              fgColor="#ffffff"
+              bgColor="#000000"
             />
           </div>
 
-          <p className="w-3/4 text-xs text-center text-green-400">
+          <p className="w-3/4 mb-2 text-xs text-center text-green-400">
             Scannez pour connecter la montre et saisir les scores
           </p>
         </div>
