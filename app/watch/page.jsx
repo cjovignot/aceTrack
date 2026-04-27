@@ -95,12 +95,31 @@ export default function WatchPage() {
       );
     }
 
-    document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "top left";
+    const baseWidth = 390; // largeur design iPhone approx
+    const baseHeight = 844;
+
+    const applyScale = () => {
+      const scaleX = window.innerWidth / baseWidth;
+      const scaleY = window.innerHeight / baseHeight;
+
+      const scale = Math.min(scaleX, scaleY);
+
+      document.body.style.transform = `scale(${scale})`;
+      document.body.style.transformOrigin = "top left";
+
+      document.body.style.width = `${baseWidth}px`;
+      document.body.style.height = `${baseHeight}px`;
+    };
+
+    applyScale();
+    window.addEventListener("resize", applyScale);
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
       document.body.style.transform = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
+      window.removeEventListener("resize", applyScale);
     };
   }, []);
 
