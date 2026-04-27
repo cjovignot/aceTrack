@@ -71,8 +71,8 @@ export default function WatchPage() {
     }
 
     // ✅ BLOQUE LE SCROLL
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    // document.documentElement.style.overflow = "hidden";
+    // document.body.style.overflow = "hidden";
 
     document.body.style.transform = "scale(1)";
     document.body.style.transformOrigin = "top left";
@@ -404,7 +404,6 @@ export default function WatchPage() {
         boxSizing: "border-box",
       }}
     >
-      {/* push */}
       {/* QR CONNECT */}
       {!isConnected && pairingToken && (
         <div
