@@ -95,20 +95,23 @@ export default function WatchPage() {
       );
     }
 
-    const baseWidth = 390; // largeur design iPhone approx
-    const baseHeight = 844;
-
     const applyScale = () => {
-      const scaleX = window.innerWidth / baseWidth;
-      const scaleY = window.innerHeight / baseHeight;
+      const realWidth = window.innerWidth;
+      const realHeight = window.innerHeight;
 
-      const scale = Math.min(scaleX, scaleY);
+      const designWidth = 300; // ta grille logique
+      const designHeight = 400;
+
+      const scale = Math.min(
+        realWidth / designWidth,
+        realHeight / designHeight,
+      );
 
       document.body.style.transform = `scale(${scale})`;
       document.body.style.transformOrigin = "top left";
 
-      document.body.style.width = `${baseWidth}px`;
-      document.body.style.height = `${baseHeight}px`;
+      document.body.style.width = `${designWidth}px`;
+      document.body.style.height = `${designHeight}px`;
     };
 
     applyScale();
