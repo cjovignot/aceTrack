@@ -58,6 +58,31 @@ export default function WatchPage() {
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
+  useEffect(() => {
+    let startY = 0;
+
+    const onTouchStart = (e) => {
+      startY = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e) => {
+      const currentY = e.touches[0].clientY;
+
+      // 🔥 bloque TOUJOURS le scroll vertical
+      if (Math.abs(currentY - startY) > 2) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: false });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
+
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
     const meta = document.querySelector("meta[name=viewport]");
