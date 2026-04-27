@@ -394,7 +394,7 @@ export default function WatchPage() {
         left: 0,
         width: "100vw",
         height: "100dvh",
-        overflow: "hidden",
+        // overflow: "hidden",
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         gridTemplateRows: "1fr 1fr 1fr 1fr",
