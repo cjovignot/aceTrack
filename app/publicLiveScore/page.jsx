@@ -5,6 +5,7 @@ import ScoreBoard from "@/components/ScoreBoard";
 
 export default function PublicLiveScore() {
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
   const [matches, setMatches] = useState([]);
   const [selectedToken, setSelectedToken] = useState(null);
 
@@ -71,6 +72,22 @@ export default function PublicLiveScore() {
 
     return () => clearInterval(intervalRef.current);
   }, [selectedToken]);
+  
+  function highlight(text, query) {
+  if (!query) return text;
+
+  const parts = text.split(new RegExp(`(${query})`, "gi"));
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase() ? (
+      <span key={i} className="text-yellow-400 font-bold">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
 
   async function loadMatch(token) {
     const res = await fetch(`/api/public/match?token=${token}`);
@@ -91,20 +108,24 @@ export default function PublicLiveScore() {
         ? match.opponent_name
         : null;
 
+
 const filteredMatches = matches
   .filter((m) => {
-    if (!search) return true; // 🔥 important
+  if (filter === "live" && m.status !== "En cours") return false;
+if (filter === "finished" && m.status !== "Terminé") return false;
+
+    if (!search) return true;
 
     const q = search.toLowerCase();
 
-    return (
-      (m.player_name || "").toLowerCase().includes(q) ||
-      (m.opponent_name || "").toLowerCase().includes(q)
-    );
+    const full =
+      `${m.player_name} ${m.opponent_name}`.toLowerCase();
+
+    return full.includes(q);
   })
   .sort((a, b) => {
-    const nameA = `${a.player_name || ""}`.toLowerCase();
-    const nameB = `${b.player_name || ""}`.toLowerCase();
+    const nameA = (a.player_name || "").toLowerCase();
+    const nameB = (b.player_name || "").toLowerCase();
     return nameA.localeCompare(nameB);
   });
   
@@ -126,6 +147,22 @@ if (!selectedToken) {
           className="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 focus:outline-none focus:border-white transition"
         />
       </div>
+      
+      <div className="flex gap-2 mb-4">
+  {["all", "live", "finished"].map((f) => (
+    <button
+      key={f}
+      onClick={() => setFilter(f)}
+      className={`px-3 py-1 rounded-lg text-sm border ${
+        filter === f
+          ? "bg-white text-black"
+          : "border-gray-700 text-gray-400"
+      }`}
+    >
+      {f}
+    </button>
+  ))}
+</div>
 
       {/* MATCH LIST */}
       <div className="grid gap-4">
@@ -142,15 +179,24 @@ if (!selectedToken) {
             className="group p-4 rounded-2xl border border-gray-800 bg-gray-900 hover:bg-gray-800 hover:border-white transition-all duration-200 text-left"
           >
             <div className="flex justify-between items-center">
-              <div className="font-semibold text-md">
-                {m.player_name} {m.player_last_name}
-                <span className="text-cyan-300 mx-2">vs</span>
-                {m.opponent_name} {m.opponent_last_name}
-              </div>
+<div className="font-semibold text-md">
+  {highlight(m.player_name, search)}
+  <span className="text-cyan-300 mx-2">vs</span>
+  {highlight(m.opponent_name, search)}
+</div>
 
-              <div className="text-xs text-gray-400 group-hover:text-white transition">
-                {m.status}
-              </div>
+<div className={`text-xs px-2 py-1 rounded-full ${
+  m.status === "En cours"
+    ? "bg-green-500/20 text-green-400"
+    : "bg-gray-700 text-gray-300"
+}`}>
+  {m.status}
+</div>
+<div className="text-sm text-gray-400 mt-1">
+  {m.score?.sets_player?.join(" - ")} 
+  {" / "}
+  {m.score?.sets_opponent?.join(" - ")}
+</div>
             </div>
           </button>
         ))}
