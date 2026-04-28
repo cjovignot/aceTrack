@@ -63,7 +63,7 @@ export default function WatchPage() {
   useEffect(() => {
     const fix = () => {
       window.scrollTo(0, 0);
-      document.documentElement.style.height = "fit";
+      document.documentElement.style.height = "100%";
       document.body.style.height = "100%";
     };
 
@@ -80,12 +80,12 @@ export default function WatchPage() {
     if (meta) {
       meta.setAttribute(
         "content",
-        "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+        "width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no",
       );
     }
 
     document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "bottom left";
+    document.body.style.transformOrigin = "top left";
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
