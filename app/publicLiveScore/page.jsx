@@ -17,18 +17,27 @@ export default function PublicLiveScore() {
   /* =========================
      LOAD MATCH LIST
   ========================= */
-  useEffect(() => {
-    loadMatches();
-    const i = setInterval(loadMatches, 5000);
-    return () => clearInterval(i);
-  }, []);
+useEffect(() => {
+  loadMatches();
+}, [filter, search]);
 
-  async function loadMatches() {
-    const res = await fetch("/api/public/matches");
-    if (!res.ok) return;
-    const data = await res.json();
-    setMatches(data);
+async function loadMatches() {
+  const params = new URLSearchParams();
+
+  if (filter !== "all") {
+    params.append("status", filter);
   }
+
+  if (search) {
+    params.append("search", search);
+  }
+
+  const res = await fetch(`/api/public/matches?${params.toString()}`);
+  if (!res.ok) return;
+
+  const data = await res.json();
+  setMatches(data);
+}
 
   /* =========================
      LOAD LIVE MATCH
@@ -109,27 +118,7 @@ export default function PublicLiveScore() {
         : null;
 
 
-const filteredMatches = matches
-  .filter((m) => {
-    // 🔍 SEARCH
-    if (search) {
-      const q = search.toLowerCase();
-      const full = `${m.player_name} ${m.opponent_name}`.toLowerCase();
-
-      if (!full.includes(q)) return false;
-    }
-
-    // 🎯 FILTER STATUS
-    if (filter === "live" && m.status !== "En cours") return false;
-    if (filter === "finished" && m.status !== "Terminé") return false;
-
-    return true;
-  })
-  .sort((a, b) => {
-    const nameA = `${a.player_name} vs ${a.opponent_name}`.toLowerCase();
-    const nameB = `${b.player_name} vs ${b.opponent_name}`.toLowerCase();
-    return nameA.localeCompare(nameB);
-  });
+const filteredMatches = matches;
   
   /* =========================
      LIST VIEW
