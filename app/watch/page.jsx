@@ -73,25 +73,25 @@ export default function WatchPage() {
   }, []);
 
   // ✅ FIX WATCH (viewport + scale)
-  useEffect(() => {
-    const meta = document.querySelector("meta[name=viewport]");
-    const previous = meta?.getAttribute("content");
+  // useEffect(() => {
+  //   const meta = document.querySelector("meta[name=viewport]");
+  //   const previous = meta?.getAttribute("content");
 
-    if (meta) {
-      meta.setAttribute(
-        "content",
-        "width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no",
-      );
-    }
+  //   if (meta) {
+  //     meta.setAttribute(
+  //       "content",
+  //       "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  //     );
+  //   }
 
-    document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "top left";
+  //   document.body.style.transform = "scale(1)";
+  //   document.body.style.transformOrigin = "top left";
 
-    return () => {
-      if (meta && previous) meta.setAttribute("content", previous);
-      document.body.style.transform = "";
-    };
-  }, []);
+  //   return () => {
+  //     if (meta && previous) meta.setAttribute("content", previous);
+  //     document.body.style.transform = "";
+  //   };
+  // }, []);
 
   // ---------- INIT ----------
   useEffect(() => {
