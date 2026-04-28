@@ -111,10 +111,10 @@ export default function PublicLiveScore() {
 
 const filteredMatches = matches
   .filter((m) => {
-  if (filter === "live" && m.status !== "En cours") return false;
-if (filter === "finished" && m.status !== "Terminé") return false;
 
     if (!search) return true;
+      if (filter === "live" && m.status !== "En cours") return false;
+if (filter === "finished" && m.status !== "Terminé") return false;
 
     const q = search.toLowerCase();
 
