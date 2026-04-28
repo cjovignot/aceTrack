@@ -59,18 +59,18 @@ export default function WatchPage() {
 
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
-  
-  useEffect(() => {
-  const fix = () => {
-    window.scrollTo(0, 0);
-    document.documentElement.style.height = "100%";
-    document.body.style.height = "100%";
-  };
 
-  fix();
-  setTimeout(fix, 50);
-  setTimeout(fix, 200);
-}, []);
+  useEffect(() => {
+    const fix = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.style.height = "fit";
+      document.body.style.height = "100%";
+    };
+
+    fix();
+    setTimeout(fix, 50);
+    setTimeout(fix, 200);
+  }, []);
 
   // ✅ FIX WATCH (viewport + scale)
   useEffect(() => {
