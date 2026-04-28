@@ -98,15 +98,13 @@ const filteredMatches = matches
     const q = search.toLowerCase();
 
     return (
-      (m.player_first_name || "").toLowerCase().includes(q) ||
-      (m.player_last_name || "").toLowerCase().includes(q) ||
-      (m.opponent_first_name || "").toLowerCase().includes(q) ||
-      (m.opponent_last_name || "").toLowerCase().includes(q)
+      (m.player_name || "").toLowerCase().includes(q) ||
+      (m.opponent_name || "").toLowerCase().includes(q)
     );
   })
   .sort((a, b) => {
-    const nameA = `${a.player_last_name || ""} ${a.player_first_name || ""}`.toLowerCase();
-    const nameB = `${b.player_last_name || ""} ${b.player_first_name || ""}`.toLowerCase();
+    const nameA = `${a.player_name || ""}`.toLowerCase();
+    const nameB = `${b.player_name || ""}`.toLowerCase();
     return nameA.localeCompare(nameB);
   });
   
@@ -145,9 +143,9 @@ if (!selectedToken) {
           >
             <div className="flex justify-between items-center">
               <div className="font-semibold text-lg">
-                {m.player_first_name} {m.player_last_name}
+                {m.player_name} {m.player_last_name}
                 <span className="text-gray-500 mx-2">vs</span>
-                {m.opponent_first_name} {m.opponent_last_name}
+                {m.opponent_name} {m.opponent_last_name}
               </div>
 
               <div className="text-xs text-gray-400 group-hover:text-white transition">
