@@ -93,18 +93,20 @@ export default function PublicLiveScore() {
 
 const filteredMatches = matches
   .filter((m) => {
+    if (!search) return true; // 🔥 important
+
     const q = search.toLowerCase();
 
     return (
-      m.player_first_name?.toLowerCase().includes(q) ||
-      m.player_last_name?.toLowerCase().includes(q) ||
-      m.opponent_first_name?.toLowerCase().includes(q) ||
-      m.opponent_last_name?.toLowerCase().includes(q)
+      (m.player_first_name || "").toLowerCase().includes(q) ||
+      (m.player_last_name || "").toLowerCase().includes(q) ||
+      (m.opponent_first_name || "").toLowerCase().includes(q) ||
+      (m.opponent_last_name || "").toLowerCase().includes(q)
     );
   })
   .sort((a, b) => {
-    const nameA = `${a.player_last_name} ${a.player_first_name}`.toLowerCase();
-    const nameB = `${b.player_last_name} ${b.player_first_name}`.toLowerCase();
+    const nameA = `${a.player_last_name || ""} ${a.player_first_name || ""}`.toLowerCase();
+    const nameB = `${b.player_last_name || ""} ${b.player_first_name || ""}`.toLowerCase();
     return nameA.localeCompare(nameB);
   });
   
