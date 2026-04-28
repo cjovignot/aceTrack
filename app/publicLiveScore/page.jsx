@@ -111,21 +111,23 @@ export default function PublicLiveScore() {
 
 const filteredMatches = matches
   .filter((m) => {
+    // 🔍 SEARCH
+    if (search) {
+      const q = search.toLowerCase();
+      const full = `${m.player_name} ${m.opponent_name}`.toLowerCase();
 
-    if (!search) return true;
-      if (filter === "live" && m.status !== "En cours") return false;
-if (filter === "finished" && m.status !== "Terminé") return false;
+      if (!full.includes(q)) return false;
+    }
 
-    const q = search.toLowerCase();
+    // 🎯 FILTER STATUS
+    if (filter === "live" && m.status !== "En cours") return false;
+    if (filter === "finished" && m.status !== "Terminé") return false;
 
-    const full =
-      `${m.player_name} ${m.opponent_name}`.toLowerCase();
-
-    return full.includes(q);
+    return true;
   })
   .sort((a, b) => {
-    const nameA = (a.player_name || "").toLowerCase();
-    const nameB = (b.player_name || "").toLowerCase();
+    const nameA = `${a.player_name} vs ${a.opponent_name}`.toLowerCase();
+    const nameB = `${b.player_name} vs ${b.opponent_name}`.toLowerCase();
     return nameA.localeCompare(nameB);
   });
   
