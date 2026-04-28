@@ -412,6 +412,7 @@ export default function WatchPage() {
         gap: 3,
         padding: 3,
         touchAction: "manipulation",
+        overflow: "hidden",
       }}
     >
       {/* QR CONNECT */}
