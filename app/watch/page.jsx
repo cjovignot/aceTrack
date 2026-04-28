@@ -61,6 +61,16 @@ export default function WatchPage() {
   const sendingRef = useRef(false);
 
   useEffect(() => {
+    const preventScroll = (e) => e.preventDefault();
+
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchmove", preventScroll);
+    };
+  }, []);
+
+  useEffect(() => {
     const fix = () => {
       window.scrollTo(0, 0);
       document.documentElement.style.height = "100%";
@@ -473,7 +483,7 @@ export default function WatchPage() {
             style={{
               gridColumn: "1 / 3",
               gridRow: "2 / 4",
-              background: "#0a0a0a",
+              background: "#000000",
               borderRadius: 6,
               display: "flex",
               flexDirection: "column",
@@ -517,7 +527,7 @@ export default function WatchPage() {
               </span>
             </div>
 
-            <div style={{ width: "70%", height: 1, background: "#222" }} />
+            <div style={{ width: "70%", height: 1, background: "#3c3c3c" }} />
 
             <div style={{ fontSize: 22 }}>
               {setsP.map((s, i) => (
