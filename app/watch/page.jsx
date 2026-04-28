@@ -85,7 +85,7 @@ export default function WatchPage() {
     }
 
     document.body.style.transform = "scale(1)";
-    document.body.style.transformOrigin = "top left";
+    document.body.style.transformOrigin = "bottom left";
 
     return () => {
       if (meta && previous) meta.setAttribute("content", previous);
