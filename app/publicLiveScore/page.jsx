@@ -142,9 +142,9 @@ if (!selectedToken) {
             className="group p-4 rounded-2xl border border-gray-800 bg-gray-900 hover:bg-gray-800 hover:border-white transition-all duration-200 text-left"
           >
             <div className="flex justify-between items-center">
-              <div className="font-semibold text-lg">
+              <div className="font-semibold text-md">
                 {m.player_name} {m.player_last_name}
-                <span className="text-gray-500 mx-2">vs</span>
+                <span className="text-cyan-300 mx-2">vs</span>
                 {m.opponent_name} {m.opponent_last_name}
               </div>
 
