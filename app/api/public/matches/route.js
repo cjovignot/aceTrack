@@ -28,7 +28,9 @@ export async function GET(req) {
   }
 
   const matches = await Match.find(query)
-    .select("_id player_name opponent_name score updatedAt public_token status")
+    .select(
+      "_id player_name opponent_name score updatedAt public_token status createdAt",
+    )
     .sort({ updatedAt: -1 })
     .lean();
 

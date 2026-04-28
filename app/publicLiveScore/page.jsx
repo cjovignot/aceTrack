@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import ScoreBoard from "@/components/ScoreBoard";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PublicLiveScore() {
   const [search, setSearch] = useState("");
@@ -70,7 +71,7 @@ export default function PublicLiveScore() {
     intervalRef.current = setInterval(async () => {
       try {
         const resMatch = await fetch(
-          `/api/public/match?token=${selectedToken}`
+          `/api/public/match?token=${selectedToken}`,
         );
         if (!resMatch.ok) return;
 
@@ -84,7 +85,7 @@ export default function PublicLiveScore() {
         }
 
         const resPoints = await fetch(
-          `/api/public/match-points?token=${selectedToken}`
+          `/api/public/match-points?token=${selectedToken}`,
         );
 
         if (resPoints.ok) {
@@ -109,12 +110,12 @@ export default function PublicLiveScore() {
 
     return parts.map((part, i) =>
       part.toLowerCase() === query.toLowerCase() ? (
-        <span key={i} className="text-yellow-400 font-bold">
+        <span key={i} className="font-bold text-yellow-400">
           {part}
         </span>
       ) : (
         part
-      )
+      ),
     );
   }
 
@@ -123,6 +124,39 @@ export default function PublicLiveScore() {
     if (!res.ok) return;
     setMatch(await res.json());
   }
+
+  function formatName(fullName) {
+    if (!fullName) return "";
+
+    const parts = fullName.trim().split(" ");
+
+    if (parts.length === 1) return parts[0];
+
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(" ");
+
+    return `${firstName.charAt(0).toUpperCase()}. ${lastName.toUpperCase()}`;
+  }
+
+  const formatDate = (iso) => {
+    const date = new Date(iso);
+
+    const day = new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(
+      date,
+    );
+    const dayNum = date.getDate();
+    const month = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(
+      date,
+    );
+    const year = date.getFullYear();
+
+    const time = new Intl.DateTimeFormat("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+
+    return `${day} ${dayNum} ${month} ${year} - ${time}`;
+  };
 
   async function loadPoints(token) {
     const res = await fetch(`/api/public/match-points?token=${token}`);
@@ -134,19 +168,19 @@ export default function PublicLiveScore() {
     match?.winner === "player"
       ? match.player_name
       : match?.winner === "opponent"
-      ? match.opponent_name
-      : null;
+        ? match.opponent_name
+        : null;
 
   /* =========================
      LIST VIEW
   ========================= */
   if (!selectedToken) {
     return (
-      <div className="min-h-screen bg-black text-white p-6">
+      <div className="min-h-screen p-6 text-white bg-black">
         {/* HEADER */}
         <div className="mb-6 space-y-4">
           <h1 className="text-3xl font-bold tracking-tight">
-            Live Scores
+            AceTrack Live Scores
           </h1>
 
           <input
@@ -154,7 +188,7 @@ export default function PublicLiveScore() {
             placeholder="Rechercher un joueur..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full p-3 rounded-xl bg-gray-900 border border-gray-800 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+            className="w-full p-3 transition bg-gray-900 border border-gray-800 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
           />
         </div>
 
@@ -181,16 +215,16 @@ export default function PublicLiveScore() {
 
         {/* LOADING */}
         {loading && (
-          <div className="text-sm text-gray-500 mb-4 animate-pulse">
+          <div className="mb-4 text-sm text-gray-500 animate-pulse">
             Chargement...
           </div>
         )}
 
         {/* EMPTY */}
         {matches.length === 0 && !loading && (
-          <div className="text-center py-20 text-gray-500">
+          <div className="py-20 text-center text-gray-500">
             <div className="text-lg">Aucun match</div>
-            <div className="text-sm mt-2">
+            <div className="mt-2 text-sm">
               Essaie une autre recherche ou filtre
             </div>
           </div>
@@ -202,41 +236,87 @@ export default function PublicLiveScore() {
             <button
               key={m._id}
               onClick={() => setSelectedToken(m.public_token)}
-              className="group p-5 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-800 hover:border-cyan-400 transition-all duration-200 text-left shadow-lg hover:shadow-cyan-500/10"
+              className="text-left transition duration-100 border-gray-800 shadow-lg group rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 hover:border-cyan-400 hover:shadow-cyan-500/10"
             >
-              <div className="flex justify-between items-start">
-                {/* PLAYERS */}
-                <div>
-                  <div className="font-semibold text-lg leading-tight">
-                    {highlight(m.player_name, search)}
-                  </div>
-                  <div className="text-gray-500 text-sm">
-                    vs {highlight(m.opponent_name, search)}
-                  </div>
-                </div>
-
+              <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-white transition-colors duration-300 rounded-t-2xl bg-gradient-to-br from-gray-900/80 to-gray-800/60 backdrop-blur-sm group-hover:text-cyan-300">
+                <span className="z-10">{formatDate(m.createdAt)}</span>
                 {/* STATUS */}
-                <div
-                  className={`text-xs px-3 py-1 rounded-full font-medium ${
+                <span
+                  className={`text-xs px-2 py-[0.5] rounded-full font-medium ${
                     m.status === "En cours"
                       ? "bg-green-500/20 text-green-400 animate-pulse"
                       : "bg-gray-700 text-gray-300"
                   }`}
                 >
                   {m.status}
-                </div>
+                </span>
+
+                {/* underline animée */}
+                <span
+                  className="
+      absolute left-0 bottom-0 h-[0.8px] w-full
+      bg-cyan-400
+      origin-left
+      scale-x-0
+      transition-transform duration-300 ease-out
+      group-hover:scale-x-100
+    "
+                />
               </div>
-
-              {/* SCORE */}
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-2xl font-bold tracking-wider">
-                  {m.score?.sets_player?.join(" ")}
-                  <span className="text-gray-500 mx-2">-</span>
-                  {m.score?.sets_opponent?.join(" ")}
+              <div className="flex justify-between p-3">
+                <div className="flex flex-col justify-between">
+                  {/* PLAYERS */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <h2 className="font-semibold leading-tight text-md">
+                      {highlight(formatName(m.player_name), search)}
+                    </h2>
+                  </div>
+                  <h1 className="font-semibold leading-tight text-md">
+                    {highlight(formatName(m.opponent_name), search)}
+                  </h1>
                 </div>
 
-                <div className="text-xs text-gray-500">
-                  Voir →
+                {/* SCORE */}
+                <div className="flex flex-col justify-between">
+                  <div className="grid grid-cols-2 gap-3">
+                    {m.score.sets_player.map((s, i) => {
+                      const opponentScore = m.score.sets_opponent[i];
+                      const isHigher = s > opponentScore;
+
+                      return (
+                        <span
+                          key={i}
+                          className={
+                            isHigher ? "text-yellow-400 font-bold" : ""
+                          }
+                        >
+                          {s}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {m.score.sets_opponent.map((s, i) => {
+                      const playerScore = m.score.sets_player[i];
+                      const isHigher = s > playerScore;
+
+                      return (
+                        <span
+                          key={i}
+                          className={isHigher ? "text-yellow-400" : ""}
+                        >
+                          {s}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end">
+                  <div className="text-xs text-cyan-400">
+                    <ChevronRight />
+                  </div>
                 </div>
               </div>
             </button>
@@ -250,39 +330,37 @@ export default function PublicLiveScore() {
      LIVE VIEW
   ========================= */
   return (
-    <div className="relative flex items-center justify-center min-h-screen text-white bg-black">
+    <div>
       {/* BACK BUTTON */}
       <button
         onClick={() => setSelectedToken(null)}
-        className="absolute top-6 left-6 text-sm text-gray-400 hover:text-white"
+        className="absolute flex items-center gap-1 text-sm text-gray-400 top-6 left-6 hover:text-white"
       >
-        ← Retour
+        <ChevronLeft size={18} /> Retour
       </button>
 
-      {match ? (
-        <>
-          <ScoreBoard
-            score={match.score}
-            points={points}
-            matchStatus={match.status}
-            playerName={match.player_name}
-            opponentName={match.opponent_name}
-          />
+      <div className="flex items-center justify-center min-h-screen p-6 text-white bg-black">
+        {match ? (
+          <>
+            <ScoreBoard
+              score={match.score}
+              points={points}
+              matchStatus={match.status}
+              playerName={match.player_name}
+              opponentName={match.opponent_name}
+            />
 
-          {match.status === "Terminé" && (
-            <div className="absolute bottom-6 text-center text-yellow-400 text-sm">
-              <div>Match terminé</div>
-              {winnerLabel && (
-                <div>Vainqueur : {winnerLabel}</div>
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <p className="text-gray-400 animate-pulse">
-          Chargement...
-        </p>
-      )}
+            {match.status === "Terminé" && (
+              <div className="absolute text-sm text-center text-yellow-400 bottom-6">
+                <div>Match terminé</div>
+                {winnerLabel && <div>Vainqueur : {winnerLabel}</div>}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-400 animate-pulse">Chargement...</p>
+        )}
+      </div>
     </div>
   );
 }
