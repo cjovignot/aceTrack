@@ -176,7 +176,7 @@ export default function PublicLiveScore() {
   ========================= */
   if (!selectedToken) {
     return (
-      <div className="min-h-screen p-6 text-white bg-black">
+      <div className="min-h-screen p-6 text-white">
         {/* HEADER */}
         <div className="mb-6 space-y-4">
           <h1 className="text-3xl font-bold tracking-tight">
@@ -341,11 +341,11 @@ export default function PublicLiveScore() {
         <ChevronLeft size={18} /> Retour
       </button>
 
-      <div className="flex items-center justify-center min-h-screen p-6 text-white bg-black">
+      <div className="flex items-center justify-center min-h-screen p-6 text-white">
         {match ? (
           <>
             <ScoreBoard
-            match={match}
+              match={match}
               score={match.score}
               points={points}
               matchStatus={match.status}

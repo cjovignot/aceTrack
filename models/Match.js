@@ -54,6 +54,7 @@ const schema = new mongoose.Schema(
       default: "En cours",
     },
     match_date_start: String,
+    match_date_end: String,
 
     score: scoreSchema,
     winner: String,

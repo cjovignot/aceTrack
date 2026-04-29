@@ -221,6 +221,7 @@ export default function MatchDetailPage() {
 
       {/* SCORE */}
       <ScoreBoard
+        match={match}
         score={match.score}
         points={points}
         matchStatus={match.status}
