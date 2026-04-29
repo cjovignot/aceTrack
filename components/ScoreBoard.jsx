@@ -7,27 +7,13 @@ export default function ScoreBoard({
   durationMinutes,
   playerName,
   opponentName,
+  match,
 }) {
   if (!score) return null;
 
   const sP = score.sets_player || [];
   const sO = score.sets_opponent || [];
   const sets = Math.max(sP.length, sO.length);
-
-  /* =========================
-     🎯 MATCH START (FROM POINTS TABLE)
-  ========================= */
-  const getMatchStartTimestamp = (pts) => {
-    if (!pts?.length) return null;
-
-    const firstValid = pts.find((p) => !p.is_deleted);
-
-    if (!firstValid) return null;
-
-    const ms = new Date(firstValid.timestamp).getTime();
-
-    return Number.isFinite(ms) ? ms : null;
-  };
 
   /* =========================
      ⏱️ LIVE CLOCK
@@ -42,10 +28,12 @@ export default function ScoreBoard({
   /* =========================
      🧠 TIMESTAMPS
   ========================= */
-  const firstPointTs = React.useMemo(
-    () => getMatchStartTimestamp(points),
-    [points]
-  );
+  const matchStartTs = React.useMemo(() => {
+  if (!match?.match_date_start) return null;
+
+  const ms = new Date(match.match_date_start).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}, [match]);
 
   const lastPointTs = React.useMemo(() => {
     const valid = points.filter((p) => !p.is_deleted);
@@ -60,7 +48,7 @@ export default function ScoreBoard({
   /* =========================
      🧮 DURATION SAFE
   ========================= */
-  const start = firstPointTs;
+const start = matchStartTs ?? "En préparation";
 
   const rawDuration =
     start != null
