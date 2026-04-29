@@ -54,6 +54,8 @@ export default function WatchPage() {
   const [pairingToken, setPairingToken] = useState(null);
 
   const hasStarted = useRef(false);
+  const [startDate, setStartDate] = useState(null);
+
   const pairingIntervalRef = useRef(null);
   const matchIntervalRef = useRef(null);
 
@@ -81,27 +83,6 @@ export default function WatchPage() {
     setTimeout(fix, 50);
     setTimeout(fix, 200);
   }, []);
-
-  // ✅ FIX WATCH (viewport + scale)
-  // useEffect(() => {
-  //   const meta = document.querySelector("meta[name=viewport]");
-  //   const previous = meta?.getAttribute("content");
-
-  //   if (meta) {
-  //     meta.setAttribute(
-  //       "content",
-  //       "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-  //     );
-  //   }
-
-  //   document.body.style.transform = "scale(1)";
-  //   document.body.style.transformOrigin = "top left";
-
-  //   return () => {
-  //     if (meta && previous) meta.setAttribute("content", previous);
-  //     document.body.style.transform = "";
-  //   };
-  // }, []);
 
   // ---------- INIT ----------
   useEffect(() => {
@@ -381,6 +362,30 @@ export default function WatchPage() {
     }
   }
 
+  const handleStartMatch = async () => {
+    if (!match) return;
+
+    const now = new Date();
+
+    // update UI immédiat (optimistic)
+    setStartDate(now);
+
+    try {
+      await fetch(`/api/matches/${match._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify({
+          match_date_start: now.toISOString(),
+        }),
+      });
+    } catch (e) {
+      console.error("Erreur démarrage match", e);
+    }
+  };
+
   // ---------- DERIVED ----------
   const score = match?.score || {};
   const setsP = score.sets_player || [];
@@ -461,6 +466,21 @@ export default function WatchPage() {
       {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
       {isReady && (
         <>
+          {startDate === null && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+              <button
+                onClick={handleStartMatch}
+                className="relative px-10 py-6 transition-all duration-300 shadow-2xl rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-500 hover:scale-105 hover:shadow-yellow-500/40 active:scale-95"
+              >
+                <span className="relative z-10 text-sm font-semibold text-black">
+                  Démarrer le match
+                </span>
+
+                {/* Glow effect */}
+                <div className="absolute inset-0 transition-opacity duration-300 rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-400 blur-xl opacity-40 hover:opacity-70" />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => scorePoint("player", "unforced_error", false)}
             className="!rounded-tl-4xl"

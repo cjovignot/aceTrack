@@ -304,7 +304,9 @@ export default function PublicLiveScore() {
                       return (
                         <span
                           key={i}
-                          className={isHigher ? "text-yellow-400" : ""}
+                          className={
+                            isHigher ? "text-yellow-400 font-bold" : ""
+                          }
                         >
                           {s}
                         </span>

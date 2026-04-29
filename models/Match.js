@@ -53,6 +53,7 @@ const schema = new mongoose.Schema(
       enum: ["En cours", "Terminé", "Abandonné"],
       default: "En cours",
     },
+    match_date_start: String,
 
     score: scoreSchema,
     winner: String,

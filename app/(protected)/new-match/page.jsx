@@ -113,6 +113,7 @@ export default function NewMatchPage() {
       status: "En cours",
       score: createInitialScore(form.serving_first, rules),
       date: new Date().toISOString(),
+      match_date_start: null,
     });
 
     router.push("/live-score");
@@ -140,7 +141,6 @@ export default function NewMatchPage() {
       <h1 className="mb-8 text-2xl font-bold">Nouveau match</h1>
 
       <div className="space-y-8">
-
         {/* --- JOUEURS --- */}
         <Section title="Joueurs">
           <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -312,7 +312,8 @@ export default function NewMatchPage() {
             {coinWinner && (
               <>
                 <p className="text-sm text-gray-400">
-                  {coinWinner === "player" ? playerLabel : opponentLabel} gagne le tirage
+                  {coinWinner === "player" ? playerLabel : opponentLabel} gagne
+                  le tirage
                 </p>
 
                 <div className="flex w-full gap-2">
@@ -327,7 +328,7 @@ export default function NewMatchPage() {
                     onClick={() =>
                       set(
                         "serving_first",
-                        coinWinner === "player" ? "opponent" : "player"
+                        coinWinner === "player" ? "opponent" : "player",
                       )
                     }
                     className={pill(form.serving_first !== coinWinner)}
