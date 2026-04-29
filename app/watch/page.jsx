@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
 import { IterationCw, Trophy } from "lucide-react";
+import { now } from "mongoose";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -238,12 +239,18 @@ export default function WatchPage() {
       client_id: clientId,
     });
 
+    const matchDateEnd = new Date();
+
     const optimisticUpdate = {
       ...match,
       score: result.score,
       updatedAt: new Date().toISOString(),
       ...(result.matchWon
-        ? { status: "Terminé", winner: result.matchWinner }
+        ? {
+            status: "Terminé",
+            winner: result.matchWinner,
+            match_date_end: matchDateEnd.toISOString(),
+          }
         : {}),
     };
 

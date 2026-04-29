@@ -345,7 +345,7 @@ export default function PublicLiveScore() {
         {match ? (
           <>
             <ScoreBoard
-            match={match}
+              match={match}
               score={match.score}
               points={points}
               matchStatus={match.status}

@@ -29,11 +29,11 @@ export default function ScoreBoard({
      🧠 TIMESTAMPS
   ========================= */
   const matchStartTs = React.useMemo(() => {
-  if (!match?.match_date_start) return null;
+    if (match?.match_date_start === null) return "En préparation";
 
-  const ms = new Date(match.match_date_start).getTime();
-  return Number.isFinite(ms) ? ms : null;
-}, [match]);
+    const ms = new Date(match.match_date_start).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }, [match]);
 
   const lastPointTs = React.useMemo(() => {
     const valid = points.filter((p) => !p.is_deleted);
@@ -44,40 +44,83 @@ export default function ScoreBoard({
   }, [points]);
 
   const isFinished = matchStatus === "Terminé";
-  
+
   /* =========================
      🧮 DURATION SAFE
   ========================= */
-const start = matchStartTs ?? "En préparation";
+  const start = matchStartTs;
 
   const rawDuration =
-    start != null
-      ? (isFinished ? lastPointTs ?? now : now) - start
-      : 0;
+    start != null ? (isFinished ? (lastPointTs ?? now) : now) - start : 0;
 
-const liveDuration =
-  Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
+  const liveDuration =
+    Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
 
-const duration =
-  isFinished && durationMinutes != null
-    ? durationMinutes * 60 * 1000
-    : liveDuration;
-
+  const duration =
+    isFinished && durationMinutes != null
+      ? durationMinutes * 60 * 1000
+      : liveDuration;
 
   /* =========================
      ⏱️ FORMAT
   ========================= */
   const formatDuration = (ms) => {
-  if (!Number.isFinite(ms) || ms <= 0) return "00:00:00";
+    if (!Number.isFinite(ms) || ms <= 0) return "00:00:00";
 
-  const totalSec = Math.floor(ms / 1000);
+    const totalSec = Math.floor(ms / 1000);
 
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
 
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-};
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const formatDate = (iso) => {
+    if (iso === null) return "Joueurs en préparation";
+    const date = new Date(iso);
+
+    const day = new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(
+      date,
+    );
+    const dayNum = date.getDate();
+    const month = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(
+      date,
+    );
+    const year = date.getFullYear();
+
+    const time = new Intl.DateTimeFormat("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+
+    return `${day} ${dayNum} ${month} ${year} - ${time}`;
+  };
+
+  const formatMatchDuration = (iso) => {
+    if (!iso) return "00:00";
+
+    const start = new Date(iso);
+    const now = match.match_date_end
+      ? new Date(match.match_date_end)
+      : new Date();
+
+    let diff = Math.floor((now - start) / 1000); // en secondes
+
+    if (diff < 0) diff = 0; // sécurité si date future
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    const pad = (n) => String(n).padStart(2, "0");
+
+    if (hours > 0) {
+      return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    return `${pad(minutes)}:${pad(seconds)}`;
+  };
 
   /* =========================
      NAME FORMAT
@@ -114,7 +157,7 @@ const duration =
           />
         </div>
 
-        <div className="truncate text-white uppercase text-sm font-semibold">
+        <div className="text-sm font-semibold text-white uppercase truncate">
           {fmtName(name)}
         </div>
 
@@ -136,9 +179,7 @@ const duration =
           );
         })}
 
-        <div className="text-right text-yellow-400 font-bold">
-          {pts || "0"}
-        </div>
+        <div className="font-bold text-right text-yellow-400">{pts || "0"}</div>
       </div>
     );
   };
@@ -150,7 +191,7 @@ const duration =
     <div className="w-full max-w-3xl p-4 mx-auto border border-white/10 rounded-xl bg-black/90">
       {/* HEADER */}
       <div
-        className="grid text-xs text-white/50 uppercase mb-2"
+        className="grid mb-2 text-xs uppercase text-white/50"
         style={{
           gridTemplateColumns: `18px 1.2fr repeat(${sets}, 44px) 70px`,
         }}
@@ -180,13 +221,11 @@ const duration =
       />
 
       {/* FOOTER */}
-      <div className="flex justify-between text-xs text-white/40 mt-3">
-        <span>
-          SET {(score.current_set || 0) + 1}
-        </span>
+      <div className="flex justify-between mt-3 text-xs text-white/40">
+        <span>SET {(score.current_set || 0) + 1}</span>
 
         <span className="font-mono text-white/60">
-          HEY{match?.match_date_start}HEY
+          {formatMatchDuration(match?.match_date_start)}
         </span>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { Home, Watch, Radio, User, ScanQrCode } from "lucide-react";
 
 const nav = [
   { path: "/dashboard", icon: Home, label: "Accueil" },
-  { path: "/live-score", icon: Watch, label: "Match" },
+  // { path: "/live-score", icon: Watch, label: "Match" },
   { path: "/watch-connect", icon: ScanQrCode, label: "Connect" },
   { path: "/stream", icon: Radio, label: "Live" },
   { path: "/profile", icon: User, label: "Profil" },

@@ -29,6 +29,8 @@ export async function GET(req) {
     opponent_name: match.opponent_name,
     updatedAt: match.updatedAt,
     public_token: match.public_token,
+    match_date_start: match.match_date_start,
+    match_date_end: match.match_date_end,
   };
 
   return NextResponse.json(safeMatch);
