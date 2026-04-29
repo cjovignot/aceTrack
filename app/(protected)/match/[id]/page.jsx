@@ -15,14 +15,6 @@ export default function MatchDetailPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // ---------------- UTILS ----------------
-  function normalizePoint(p) {
-    return {
-      ...p,
-      shot_type: normalizeShotType(p.shot_type),
-      isWinner: p.isWinner ?? p.point_winner === "player",
-    };
-  }
-
   function normalizeShotType(type) {
     if (!type) return "";
 
@@ -34,6 +26,30 @@ export default function MatchDetailPage() {
     if (t.includes("coup") || t.includes("winner")) return "winner";
 
     return type;
+  }
+
+  function safeParse(str) {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return null;
+    }
+  }
+
+  function normalizePoint(p) {
+    return {
+      ...p,
+      shot_type: normalizeShotType(p.shot_type),
+      score: safeParse(p.score_at_point),
+    };
+  }
+
+  function isPlayerServing(p) {
+    return p.score?.serving === "player";
+  }
+
+  function isOpponentServing(p) {
+    return p.score?.serving === "opponent";
   }
 
   // ---------------- FETCH ----------------
@@ -50,7 +66,6 @@ export default function MatchDetailPage() {
   }, [id]);
 
   function reloadComponent() {
-    console.log("hey");
     window.location.reload();
   }
 
@@ -80,47 +95,62 @@ export default function MatchDetailPage() {
   const cleanPoints = points.filter((p) => !p.is_deleted);
   const normalizedPoints = cleanPoints.map(normalizePoint);
 
-  const playerPoints = normalizedPoints.filter(
-    (p) => p.point_winner === "player",
-  );
+  const stats = computeStats(normalizedPoints);
+  const player = stats.player;
+  const opponent = stats.opponent;
 
-  const opponentPoints = normalizedPoints.filter(
-    (p) => p.point_winner === "opponent",
-  );
+  // ---- erreurs totales
+  const playerTotalErrors = player.unforcedErrors + player.forcedErrors;
+  const opponentTotalErrors = opponent.unforcedErrors + opponent.forcedErrors;
 
-  const playerStats = computeStats(playerPoints);
-  const opponentStats = computeStats(opponentPoints);
+  // ---- offensif
+  const playerOffensive = player.winners + player.forcedErrors;
+  const opponentOffensive = opponent.winners + opponent.forcedErrors;
 
-  // 🔥 MERGE DES STATS
-  function mergeStats(a, b) {
-    const result = {};
-    const keys = Object.keys(a);
+  // ---- service %
+  let playerServePoints = 0;
+  let playerServeWon = 0;
 
-    for (const key of keys) {
-      result[key] = (a[key] || 0) + (b[key] || 0);
+  let opponentServePoints = 0;
+  let opponentServeWon = 0;
+
+  for (const p of normalizedPoints) {
+    if (isPlayerServing(p)) {
+      playerServePoints++;
+      if (p.point_winner === "player") playerServeWon++;
     }
 
-    return result;
+    if (isOpponentServing(p)) {
+      opponentServePoints++;
+      if (p.point_winner === "opponent") opponentServeWon++;
+    }
   }
 
-  const mergedPlayerStats = mergeStats(
-    playerStats.player,
-    opponentStats.player,
-  );
+  const playerServePct =
+    playerServePoints > 0 ? (playerServeWon / playerServePoints) * 100 : 0;
 
-  const mergedOpponentStats = mergeStats(
-    playerStats.opponent,
-    opponentStats.opponent,
-  );
+  const opponentServePct =
+    opponentServePoints > 0 ? (opponentServeWon / opponentServePoints) * 100 : 0;
 
-  // ---------------- WIN RATE ----------------
+  // ---- ratio winners / fautes
+  const playerRatio =
+    player.unforcedErrors > 0
+      ? Number((player.winners / player.unforcedErrors).toFixed(2))
+      : player.winners;
+
+  const opponentRatio =
+    opponent.unforcedErrors > 0
+      ? Number((opponent.winners / opponent.unforcedErrors).toFixed(2))
+      : opponent.winners;
+
+  // ---- win rate
   const totalPoints = normalizedPoints.length;
 
   const playerRate =
-    totalPoints > 0 ? (mergedPlayerStats.winners / totalPoints) * 100 : 0;
+    totalPoints > 0 ? (player.winners / totalPoints) * 100 : 0;
 
   const opponentRate =
-    totalPoints > 0 ? (mergedOpponentStats.winners / totalPoints) * 100 : 0;
+    totalPoints > 0 ? (opponent.winners / totalPoints) * 100 : 0;
 
   // ---------------- UI ----------------
   return (
@@ -133,9 +163,11 @@ export default function MatchDetailPage() {
         >
           <ArrowLeft className="w-4 h-4" /> Retour
         </button>
-        <button onClick={() => reloadComponent()}>
+
+        <button onClick={reloadComponent}>
           <RefreshCw className="w-4 h-4" />
         </button>
+
         <button
           onClick={() => setShowConfirm(true)}
           className="p-2 text-gray-400 transition rounded-lg hover:bg-red-50 hover:text-red-500"
@@ -155,13 +187,13 @@ export default function MatchDetailPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 font-semibold transition border border-gray-400 h-11 rounded-xl hover:bg-gray-50"
+                className="flex-1 border border-gray-400 h-11 rounded-xl"
               >
                 Annuler
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 font-semibold text-white transition bg-red-600 h-11 rounded-xl hover:bg-red-700"
+                className="flex-1 text-white bg-red-600 h-11 rounded-xl"
               >
                 Supprimer
               </button>
@@ -172,18 +204,16 @@ export default function MatchDetailPage() {
 
       {/* RESULT */}
       {match.status === "Terminé" && (
-        <div className={"text-center mb-6 py-4 rounded-2xl bg-transparent"}>
+        <div className="text-center mb-6">
           {match.winner === "player" ? (
             <>
-              <Trophy className={"w-6 h-6 mx-auto mb-1 text-yellow-500"} />
-              <p className={`text-lg font-semibold text-yellow-500`}>
-                Victoire
-              </p>
+              <Trophy className="w-6 h-6 mx-auto text-yellow-500" />
+              <p className="text-yellow-500 font-semibold">Victoire</p>
             </>
           ) : (
             <>
-              <X className={"w-6 h-6 mx-auto mb-1 text-red-800"} />
-              <p className={`text-lg font-semibold text-red-800`}>Défaite</p>
+              <X className="w-6 h-6 mx-auto text-red-800" />
+              <p className="text-red-800 font-semibold">Défaite</p>
             </>
           )}
         </div>
@@ -199,79 +229,40 @@ export default function MatchDetailPage() {
       />
 
       {/* INFOS */}
-      <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
-        <span className="flex items-center gap-1">🎾 {match.surface}</span>
+      <div className="flex justify-center gap-4 mt-4 text-xs text-gray-400">
+        <span>🎾 {match.surface}</span>
         {match.duration_minutes && (
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {match.duration_minutes} min
+          <span>
+            <Clock className="inline w-3 h-3" /> {match.duration_minutes} min
           </span>
         )}
       </div>
 
       {/* STATS */}
-      <div className="mt-10 space-y-6">
-        <h2 className="text-lg font-semibold text-center text-cyan-300/80">
-          Statistiques
-        </h2>
+      <div className="mt-10 space-y-4">
+        <StatBar label="Coups gagnants" playerValue={player.winners} opponentValue={opponent.winners} />
+        <StatBar label="Fautes directes" playerValue={player.unforcedErrors} opponentValue={opponent.unforcedErrors} />
+        <StatBar label="Fautes provoquées" playerValue={player.forcedErrors} opponentValue={opponent.forcedErrors} />
+        <StatBar label="Total fautes" playerValue={playerTotalErrors} opponentValue={opponentTotalErrors} />
+        <StatBar label="Aces" playerValue={player.aces} opponentValue={opponent.aces} />
+        <StatBar label="Doubles fautes" playerValue={player.doubleFaults} opponentValue={opponent.doubleFaults} />
 
-        <div className="px-4 space-y-4">
-          <StatBar
-            label="Coups gagnants"
-            playerValue={mergedPlayerStats.winners}
-            opponentValue={mergedOpponentStats.winners}
-          />
+        <StatBar label="Winners coup droit" playerValue={player.forehandWinners} opponentValue={opponent.forehandWinners} />
+        <StatBar label="Winners revers" playerValue={player.backhandWinners} opponentValue={opponent.backhandWinners} />
 
-          <StatBar
-            label="Fautes"
-            playerValue={mergedPlayerStats.unforcedErrors}
-            opponentValue={mergedOpponentStats.unforcedErrors}
-          />
+        <StatBar label="Jeu offensif" playerValue={playerOffensive} opponentValue={opponentOffensive} />
 
-          <StatBar
-            label="Aces"
-            playerValue={mergedPlayerStats.aces}
-            opponentValue={mergedOpponentStats.aces}
-          />
+        <StatBar label="% points service" playerValue={playerServePct.toFixed(0)} opponentValue={opponentServePct.toFixed(0)} isPercent />
 
-          <StatBar
-            label="Doubles fautes"
-            playerValue={mergedPlayerStats.doubleFaults}
-            opponentValue={mergedOpponentStats.doubleFaults}
-          />
-        </div>
+        <StatBar label="Ratio W / F" playerValue={playerRatio} opponentValue={opponentRatio} isRatio />
+      </div>
 
-        {/* WIN RATE */}
-        <div className="p-5 border border-cyan-300/80 bg-gray/85 rounded-2xl">
-          <h3 className="mb-3 text-sm font-semibold">Répartition des points</h3>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-green-600">
-              {mergedPlayerStats.winners} / {totalPoints}
-            </span>
-
-            <div className="relative flex-1 h-4 overflow-hidden bg-transparent rounded-full">
-              <div className="absolute top-0 bottom-0 w-px left-1/2 bg-gray-400/40" />
-
-              <div
-                className="absolute top-0 h-full text-xs font-semibold text-center text-black bg-green-600 rounded-l-full right-1/2"
-                style={{ width: `${playerRate}%` }}
-              >
-                {playerRate.toFixed(0)} %
-              </div>
-
-              <div
-                className="absolute top-0 h-full text-xs font-semibold text-center text-black bg-orange-400 rounded-r-full left-1/2"
-                style={{ width: `${opponentRate}%` }}
-              >
-                {opponentRate.toFixed(0)} %
-              </div>
-            </div>
-
-            <span className="text-xs font-semibold text-orange-400">
-              {mergedOpponentStats.winners} / {totalPoints}
-            </span>
-          </div>
+      {/* WIN RATE */}
+      <div className="mt-6 p-4 border rounded-xl">
+        <p className="text-sm mb-2">Répartition des points</p>
+        <div className="flex justify-between text-xs">
+          <span>{player.winners} / {totalPoints}</span>
+          <span>{opponent.winners} / {totalPoints}</span>
         </div>
       </div>
     </div>
@@ -279,43 +270,43 @@ export default function MatchDetailPage() {
 }
 
 // ---------------- COMPONENT ----------------
-function StatBar({ label, playerValue, opponentValue }) {
-  const total = playerValue + opponentValue;
+function StatBar({ label, playerValue, opponentValue, isRatio = false, isPercent = false }) {
+  if (isRatio) {
+    return (
+      <div className="flex justify-between text-sm">
+        <span>{label}</span>
+        <span className="text-green-600">{playerValue}</span>
+        <span className="text-orange-400">{opponentValue}</span>
+      </div>
+    );
+  }
 
+  if (isPercent) {
+    return (
+      <div className="flex justify-between text-sm">
+        <span>{label}</span>
+        <span className="text-green-600">{playerValue}%</span>
+        <span className="text-orange-400">{opponentValue}%</span>
+      </div>
+    );
+  }
+
+  const total = playerValue + opponentValue;
   const playerPct = total > 0 ? (playerValue / total) * 100 : 0;
   const opponentPct = total > 0 ? (opponentValue / total) * 100 : 0;
 
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-gray-500">
-        <span>{label}</span>
-      </div>
+      <div className="text-xs text-gray-500">{label}</div>
 
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-bold text-green-600">
-          {playerValue} / {playerValue + opponentValue}
-        </span>
+      <div className="flex items-center gap-2">
+        <span className="text-green-600 text-xs">{playerValue}</span>
 
-        <div className="relative flex-1 h-4 overflow-hidden bg-transparent rounded-full">
-          <div className="absolute top-0 bottom-0 w-px left-1/2 bg-black/40" />
-          <div
-            className="absolute top-0 h-full text-xs font-semibold text-center text-black bg-green-600 rounded-l-full right-1/2"
-            style={{ width: `${playerPct / 2}%` }}
-          >
-            {playerPct.toFixed(0)} %
-          </div>
-
-          <div
-            className="absolute top-0 h-full text-xs font-semibold text-center text-black bg-orange-400 rounded-r-full left-1/2"
-            style={{ width: `${opponentPct / 2}%` }}
-          >
-            {opponentPct.toFixed(0)} %
-          </div>
+        <div className="flex-1 h-2 bg-gray-200 rounded">
+          <div className="h-2 bg-green-600 rounded-l" style={{ width: `${playerPct}%` }} />
         </div>
 
-        <span className="text-xs font-bold text-orange-400">
-          {opponentValue} / {playerValue + opponentValue}
-        </span>
+        <span className="text-orange-400 text-xs">{opponentValue}</span>
       </div>
     </div>
   );
