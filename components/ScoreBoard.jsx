@@ -186,7 +186,7 @@ const duration =
         </span>
 
         <span className="font-mono text-white/60">
-          {match?.match_date_start}
+          HEY{match?.match_date_start}HEY
         </span>
       </div>
     </div>
