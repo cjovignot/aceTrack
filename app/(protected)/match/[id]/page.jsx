@@ -262,8 +262,8 @@ export default function MatchDetailPage() {
       <div className="mt-6 p-4 border rounded-xl">
         <p className="text-sm mb-2">Répartition des points</p>
         <div className="flex justify-between text-xs">
-          <span>{player.winners} / {totalPoints}</span>
-          <span>{opponent.winners} / {totalPoints}</span>
+          <span  className="text-green-600" >{player.winners} / {totalPoints}</span>
+          <span   className="text-orange-400">{opponent.winners} / {totalPoints}</span>
         </div>
       </div>
     </div>
