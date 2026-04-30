@@ -3,12 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/AuthContext";
 import api from "../../../lib/api";
-import {
-  Plus,
-  Trophy,
-  TrendingUp,
-  Flame,
-} from "lucide-react";
+import { Plus, Trophy, TrendingUp, Flame } from "lucide-react";
 import { computeStats } from "../../../lib/stats";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,38 +14,38 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedStat, setSelectedStat] = useState(null);
 
-useEffect(() => {
-  async function fetchData() {
-    try {
-      // 1. Récupérer les matchs
-      const matchRes = await api.get("/api/matches");
-      const matchesData = matchRes.data || [];
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // 1. Récupérer les matchs
+        const matchRes = await api.get("/api/matches");
+        const matchesData = matchRes.data || [];
 
-      setMatches(matchesData);
+        setMatches(matchesData);
 
-      // 2. Récupérer les points de CHAQUE match
-      const pointsPromises = matchesData.map((m) =>
-        api
-          .get(`/api/points?match_id=${m._id}`)
-          .then((res) => res.data || [])
-          .catch(() => [])
-      );
+        // 2. Récupérer les points de CHAQUE match
+        const pointsPromises = matchesData.map((m) =>
+          api
+            .get(`/api/points?match_id=${m._id}`)
+            .then((res) => res.data || [])
+            .catch(() => []),
+        );
 
-      const pointsPerMatch = await Promise.all(pointsPromises);
+        const pointsPerMatch = await Promise.all(pointsPromises);
 
-      // 3. Flatten
-      const allPoints = pointsPerMatch.flat();
+        // 3. Flatten
+        const allPoints = pointsPerMatch.flat();
 
-      setPoints(allPoints);
-    } catch (err) {
-      console.error("Erreur chargement dashboard:", err);
-    } finally {
-      setLoading(false);
+        setPoints(allPoints);
+      } catch (err) {
+        console.error("Erreur chargement dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  fetchData();
-}, []);
+    fetchData();
+  }, []);
 
   // ---------------- BASIC ----------------
   const wins = matches.filter((m) => m.winner === "player").length;
@@ -77,16 +72,16 @@ useEffect(() => {
     if (t.includes("winner") || t.includes("coup")) return "winner";
     return type;
   }
-const normalizedPoints = points
-  .filter((p) => !p.is_deleted)
-  .map((p) => ({
-    ...p,
-    shot_type: normalizeShotType(p.shot_type || p.type),
-    stroke_type: p.stroke_type || null,
-    point_winner: p.point_winner,
-    is_deleted: p.is_deleted || false,
-    score: safeParse(p.score_at_point),
-  }));
+  const normalizedPoints = points
+    .filter((p) => !p.is_deleted)
+    .map((p) => ({
+      ...p,
+      shot_type: normalizeShotType(p.shot_type || p.type),
+      stroke_type: p.stroke_type || null,
+      point_winner: p.point_winner,
+      is_deleted: p.is_deleted || false,
+      score: safeParse(p.score_at_point),
+    }));
 
   function safeParse(str) {
     try {
@@ -95,7 +90,6 @@ const normalizedPoints = points
       return null;
     }
   }
-
 
   // ---------------- GLOBAL STATS ----------------
   const stats = computeStats(normalizedPoints);
@@ -113,6 +107,22 @@ const normalizedPoints = points
   const acesPerMatch = (player.aces / totalMatches).toFixed(1);
   const dfPerMatch = (player.doubleFaults / totalMatches).toFixed(1);
 
+  // ---------------- PLAYER SCORE ----------------
+  const totalActions =
+    player.winners + player.unforcedErrors + player.doubleFaults || 1;
+
+  const efficiency = player.winners / totalActions;
+
+  const playerScore = Math.round(efficiency * 100);
+
+  function getScoreLabel(score) {
+    if (score > 70) return "🔥 Très solide";
+    if (score > 55) return "💪 Bon niveau";
+    if (score > 45) return "⚖️ Moyen";
+    if (score > 35) return "⚠️ Irrégulier";
+    return "❌ Trop de fautes";
+  }
+
   // ---------------- SERVICE ----------------
   let servePoints = 0;
   let serveWon = 0;
@@ -129,9 +139,9 @@ const normalizedPoints = points
 
   // ---------------- GRAPH ----------------
   const graphData = [
-    { label: "Winners", value: player.winners },
-    { label: "UE", value: player.unforcedErrors },
-    { label: "FE", value: player.forcedErrors },
+    { label: "Coups gagnant", value: player.winners },
+    { label: "Fautes directes", value: player.unforcedErrors },
+    { label: "Fautes provoquées", value: player.forcedErrors },
   ];
 
   const maxGraph = Math.max(...graphData.map((d) => d.value), 1);
@@ -139,9 +149,7 @@ const normalizedPoints = points
   // ---------------- UI ----------------
   return (
     <div className="max-w-2xl px-4 py-6 mx-auto mb-20">
-      <h1 className="mb-6 text-2xl font-bold text-white">
-        🎾 Tableau de bord
-      </h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">🎾 Tableau de bord</h1>
 
       {/* TOP STATS */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -164,11 +172,18 @@ const normalizedPoints = points
           active={selectedStat === "service"}
           onClick={() => setSelectedStat("service")}
         />
+        {/* <Stat
+          label="Style"
+          value={player.winners}
+          active={selectedStat === "style"}
+          onClick={() => setSelectedStat("style")}
+        /> */}
+
         <Stat
-          label="Fautes"
-          value={totalErrors}
-          active={selectedStat === "errors"}
-          onClick={() => setSelectedStat("errors")}
+          label="Efficacité"
+          value={playerScore}
+          active={selectedStat === "score"}
+          onClick={() => setSelectedStat("score")}
         />
       </div>
 
@@ -193,18 +208,77 @@ const normalizedPoints = points
             {selectedStat === "service" && (
               <>
                 <p className="mb-3 font-semibold">⚡ Service</p>
-                <MiniBar label="Points gagnés" value={servePct} suffix="%" />
-                <MiniBar label="Aces/match" value={acesPerMatch} />
-                <MiniBar label="DF/match" value={dfPerMatch} />
+                <MiniBar
+                  label="Points gagnés au service"
+                  value={servePct}
+                  suffix="%"
+                />
+                <MiniBar label="Aces / match" value={acesPerMatch} />
+                <MiniBar label="Doubles Fautes / match" value={dfPerMatch} />
               </>
             )}
 
-            {selectedStat === "errors" && (
+            {selectedStat === "score" && (
               <>
-                <p className="mb-3 font-semibold">⚠️ Fautes</p>
-                <MiniBar label="Total" value={totalErrors} />
-                <MiniBar label="Directes" value={player.unforcedErrors} />
-                <MiniBar label="Provoquées" value={player.forcedErrors} />
+                {/* HEADER */}
+                <div className="flex items-center justify-between mb-4">
+                  <p className="font-semibold">
+                    📊 Niveau de jeu — {getScoreLabel(playerScore)}
+                  </p>
+                  <span
+                    className={`text-lg font-bold ${
+                      playerScore > 30
+                        ? "text-green-400"
+                        : playerScore > 0
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                    }`}
+                  >
+                    {playerScore}
+                  </span>
+                </div>
+
+                {/* GLOBAL BAR */}
+                <MiniBar label="Score global" value={playerScore} suffix="%" />
+                <div className="my-8 border-t border-gray-700/50" />
+
+                {/* SECTIONS */}
+                <div className="mt-4 space-y-4">
+                  {/* SERVICE */}
+                  <div className="p-3 rounded-xl bg-gray-800/50">
+                    <p className="mb-2 text-xs font-semibold tracking-wide text-cyan-300/70">
+                      ⚡ Service
+                    </p>
+                    <MiniBar label="Aces" value={player.aces} />
+                    <MiniBar
+                      label="Double fautes"
+                      value={player.doubleFaults}
+                    />
+                  </div>
+
+                  {/* JEU */}
+                  <div className="p-3 rounded-xl bg-gray-800/50">
+                    <p className="mb-2 text-xs font-semibold tracking-wide text-cyan-300/70">
+                      🎾 Jeu
+                    </p>
+                    <MiniBar label="Coups gagnants" value={player.winners} />
+                    <MiniBar
+                      label="Fautes directes"
+                      value={player.unforcedErrors}
+                    />
+                  </div>
+
+                  {/* PRESSION */}
+                  <div className="p-3 rounded-xl bg-gray-800/50">
+                    <p className="mb-2 text-xs font-semibold tracking-wide text-cyan-300/70">
+                      🔥 Pression
+                    </p>
+                    <MiniBar
+                      label="Fautes provoquées"
+                      value={player.forcedErrors}
+                    />
+                  </div>
+                </div>
               </>
             )}
 
@@ -246,17 +320,21 @@ const normalizedPoints = points
           {/* EN COURS */}
           <div>
             <h3 className="mb-2 text-sm text-green-400/70">En cours</h3>
-            {matches.filter((m) => m.status === "En cours").map((m) => (
-              <MatchItem key={m._id} match={m} />
-            ))}
+            {matches
+              .filter((m) => m.status === "En cours")
+              .map((m) => (
+                <MatchItem key={m._id} match={m} />
+              ))}
           </div>
 
           {/* TERMINÉS */}
           <div>
             <h3 className="mb-2 text-sm text-red-400/70">Terminés</h3>
-            {matches.filter((m) => m.status === "Terminé").map((m) => (
-              <MatchItem key={m._id} match={m} />
-            ))}
+            {matches
+              .filter((m) => m.status === "Terminé")
+              .map((m) => (
+                <MatchItem key={m._id} match={m} />
+              ))}
           </div>
         </motion.div>
       )}
@@ -280,16 +358,26 @@ function Stat({ icon, value, label, onClick, active }) {
 }
 
 function MiniBar({ label, value, suffix = "" }) {
+  const percentage = Math.min(value, 100);
+
   return (
-    <div className="mb-2">
+    <div className="mb-3">
+      {/* LABEL */}
       <div className="flex justify-between text-xs text-gray-400">
         <span>{label}</span>
-        <span>{value}{suffix}</span>
+        <span>
+          {value}
+          {suffix}
+        </span>
       </div>
-      <div className="h-2 mt-1 bg-gray-700 rounded">
-        <div
-          className="h-2 bg-cyan-400 rounded"
-          style={{ width: `${Math.min(value, 100)}%` }}
+
+      {/* BAR BG */}
+      <div className="h-2 mt-1 overflow-hidden bg-gray-700 rounded">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="h-2 rounded bg-cyan-400"
         />
       </div>
     </div>
@@ -297,17 +385,30 @@ function MiniBar({ label, value, suffix = "" }) {
 }
 
 function MiniBarChart({ data, max }) {
+  const chartHeight = 70;
+
   return (
-    <div className="flex items-end gap-3 h-24">
+    <div className="grid w-full grid-cols-3 gap-3 mt-4">
+      {/* ROW 1 → CHART */}
       {data.map((d, i) => (
-        <div key={i} className="flex flex-col items-center flex-1">
+        <div key={"bar-" + i} className="flex items-end justify-center h-24">
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: `${(d.value / max) * 100}%` }}
+            animate={{
+              height: Math.max((d.value / max) * chartHeight, 4),
+            }}
             transition={{ duration: 0.4 }}
-            className="w-full bg-cyan-400 rounded-t"
-          />
-          <span className="mt-1 text-xs text-gray-400">{d.label}</span>
+            className="relative flex items-start justify-center w-6 text-xs text-white rounded-t bg-cyan-400"
+          >
+            <p className="absolute -top-5">{d.value}</p>
+          </motion.div>
+        </div>
+      ))}
+
+      {/* ROW 2 → LABELS */}
+      {data.map((d, i) => (
+        <div key={"label-" + i} className="text-xs text-center text-gray-400">
+          {d.label}
         </div>
       ))}
     </div>

@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "../../../../lib/api";
 import { computeStats } from "../../../../lib/stats";
 import ScoreBoard from "../../../../components/ScoreBoard";
+import StatBar from "@/components/Stats/StatBar";
 import { ArrowLeft, Trophy, Clock, Trash2, X, RefreshCw } from "lucide-react";
 
 export default function MatchDetailPage() {
@@ -130,7 +131,9 @@ export default function MatchDetailPage() {
     playerServePoints > 0 ? (playerServeWon / playerServePoints) * 100 : 0;
 
   const opponentServePct =
-    opponentServePoints > 0 ? (opponentServeWon / opponentServePoints) * 100 : 0;
+    opponentServePoints > 0
+      ? (opponentServeWon / opponentServePoints) * 100
+      : 0;
 
   // ---- ratio winners / fautes
   const playerRatio =
@@ -142,15 +145,6 @@ export default function MatchDetailPage() {
     opponent.unforcedErrors > 0
       ? Number((opponent.winners / opponent.unforcedErrors).toFixed(2))
       : opponent.winners;
-
-  // ---- win rate
-  const totalPoints = normalizedPoints.length;
-
-  const playerRate =
-    totalPoints > 0 ? (player.winners / totalPoints) * 100 : 0;
-
-  const opponentRate =
-    totalPoints > 0 ? (opponent.winners / totalPoints) * 100 : 0;
 
   // ---------------- UI ----------------
   return (
@@ -204,16 +198,16 @@ export default function MatchDetailPage() {
 
       {/* RESULT */}
       {match.status === "Terminé" && (
-        <div className="text-center mb-6">
+        <div className="mb-6 text-center">
           {match.winner === "player" ? (
             <>
               <Trophy className="w-6 h-6 mx-auto text-yellow-500" />
-              <p className="text-yellow-500 font-semibold">Victoire</p>
+              <p className="font-semibold text-yellow-500">Victoire</p>
             </>
           ) : (
             <>
               <X className="w-6 h-6 mx-auto text-red-800" />
-              <p className="text-red-800 font-semibold">Défaite</p>
+              <p className="font-semibold text-red-800">Défaite</p>
             </>
           )}
         </div>
@@ -230,7 +224,7 @@ export default function MatchDetailPage() {
       />
 
       {/* INFOS */}
-      <div className="flex justify-center gap-4 mt-4 text-xs text-gray-400">
+      <div className="flex justify-center gap-4 mt-4 text-xs text-gray-200">
         <span>🎾 {match.surface}</span>
         {match.duration_minutes && (
           <span>
@@ -241,79 +235,71 @@ export default function MatchDetailPage() {
 
       {/* STATS */}
       <div className="mt-10 space-y-4">
-        <StatBar label="Coups gagnants" playerValue={player.winners} opponentValue={opponent.winners} />
-        <StatBar label="Fautes directes" playerValue={player.unforcedErrors} opponentValue={opponent.unforcedErrors} />
-        <StatBar label="Fautes provoquées" playerValue={player.forcedErrors} opponentValue={opponent.forcedErrors} />
-        <StatBar label="Total fautes" playerValue={playerTotalErrors} opponentValue={opponentTotalErrors} />
-        <StatBar label="Aces" playerValue={player.aces} opponentValue={opponent.aces} />
-        <StatBar label="Doubles fautes" playerValue={player.doubleFaults} opponentValue={opponent.doubleFaults} />
+        <StatBar
+          label="Fautes directes"
+          playerValue={player.unforcedErrors}
+          opponentValue={opponent.unforcedErrors}
+        />
+        <StatBar
+          label="Fautes provoquées"
+          playerValue={player.forcedErrors}
+          opponentValue={opponent.forcedErrors}
+        />
+        <StatBar
+          label="Total fautes"
+          playerValue={playerTotalErrors}
+          opponentValue={opponentTotalErrors}
+        />
+        <StatBar
+          label="Aces"
+          playerValue={player.aces}
+          opponentValue={opponent.aces}
+        />
+        <StatBar
+          label="Doubles fautes"
+          playerValue={player.doubleFaults}
+          opponentValue={opponent.doubleFaults}
+        />
 
-        <StatBar label="Winners coup droit" playerValue={player.forehandWinners} opponentValue={opponent.forehandWinners} />
-        <StatBar label="Winners revers" playerValue={player.backhandWinners} opponentValue={opponent.backhandWinners} />
+        <StatBar
+          label="Winners coup droit"
+          playerValue={player.forehandWinners}
+          opponentValue={opponent.forehandWinners}
+        />
+        <StatBar
+          label="Winners revers"
+          playerValue={player.backhandWinners}
+          opponentValue={opponent.backhandWinners}
+        />
 
-        <StatBar label="Jeu offensif" playerValue={playerOffensive} opponentValue={opponentOffensive} />
+        <StatBar
+          label="Jeu offensif"
+          playerValue={playerOffensive}
+          opponentValue={opponentOffensive}
+        />
 
-        <StatBar label="% points service" playerValue={playerServePct.toFixed(0)} opponentValue={opponentServePct.toFixed(0)} isPercent />
+        <StatBar
+          label="% points service"
+          playerValue={playerServePct.toFixed(0)}
+          opponentValue={opponentServePct.toFixed(0)}
+          isPercent
+        />
 
-        <StatBar label="Ratio W / F" playerValue={playerRatio} opponentValue={opponentRatio} isRatio />
+        <StatBar
+          label="Ratio W / F"
+          playerValue={playerRatio}
+          opponentValue={opponentRatio}
+          isRatio
+        />
       </div>
 
       {/* WIN RATE */}
-      <div className="mt-6 p-4 border rounded-xl">
-        <p className="text-sm mb-2">Répartition des points</p>
-        <div className="flex justify-between text-xs">
-          <span  className="text-green-600" >{player.winners} / {totalPoints}</span>
-          <span   className="text-orange-400">{opponent.winners} / {totalPoints}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------- COMPONENT ----------------
-function StatBar({ label, playerValue, opponentValue }) {
-  const total = playerValue + opponentValue;
-
-  const playerPct = total > 0 ? (playerValue / total) * 100 : 0;
-  const opponentPct = total > 0 ? (opponentValue / total) * 100 : 0;
-
-  return (
-    <div className="space-y-1">
-      {/* LABEL */}
-      <div className="text-xs text-gray-500">{label}</div>
-
-      {/* VALUES + BAR */}
-      <div className="flex items-center gap-2">
-        {/* PLAYER VALUE */}
-        <span className="text-green-600 text-xs font-semibold">
-          {playerValue}
-        </span>
-
-        {/* BAR */}
-        <div className="flex-1 h-2 bg-gray-200 rounded overflow-hidden flex">
-          {/* PLAYER SIDE */}
-          <div
-            className="h-2 bg-green-600 transition-all duration-300"
-            style={{ width: `${playerPct}%` }}
-          />
-
-          {/* OPPONENT SIDE */}
-          <div
-            className="h-2 bg-orange-400 transition-all duration-300"
-            style={{ width: `${opponentPct}%` }}
-          />
-        </div>
-
-        {/* OPPONENT VALUE */}
-        <span className="text-orange-400 text-xs font-semibold">
-          {opponentValue}
-        </span>
-      </div>
-
-      {/* OPTIONAL PERCENTAGES */}
-      <div className="flex justify-between text-[10px] text-gray-400">
-        <span className="text-green-600">{playerPct.toFixed(0)}%</span>
-        <span className="text-orange-400">{opponentPct.toFixed(0)}%</span>
+      <div className="p-4 mt-6 border rounded-xl">
+        <p className="mb-2 text-sm">Répartition des points</p>
+        <StatBar
+          playerValue={player.winners}
+          opponentValue={opponent.winners}
+        />
       </div>
     </div>
   );
