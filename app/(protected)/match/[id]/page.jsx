@@ -271,43 +271,49 @@ export default function MatchDetailPage() {
 }
 
 // ---------------- COMPONENT ----------------
-function StatBar({ label, playerValue, opponentValue, isRatio = false, isPercent = false }) {
-  if (isRatio) {
-    return (
-      <div className="flex justify-between text-sm">
-        <span>{label}</span>
-        <span className="text-green-600">{playerValue}</span>
-        <span className="text-orange-400">{opponentValue}</span>
-      </div>
-    );
-  }
-
-  if (isPercent) {
-    return (
-      <div className="flex justify-between text-sm">
-        <span>{label}</span>
-        <span className="text-green-600">{playerValue}%</span>
-        <span className="text-orange-400">{opponentValue}%</span>
-      </div>
-    );
-  }
-
+function StatBar({ label, playerValue, opponentValue }) {
   const total = playerValue + opponentValue;
+
   const playerPct = total > 0 ? (playerValue / total) * 100 : 0;
   const opponentPct = total > 0 ? (opponentValue / total) * 100 : 0;
 
   return (
     <div className="space-y-1">
+      {/* LABEL */}
       <div className="text-xs text-gray-500">{label}</div>
 
+      {/* VALUES + BAR */}
       <div className="flex items-center gap-2">
-        <span className="text-green-600 text-xs">{playerValue}</span>
+        {/* PLAYER VALUE */}
+        <span className="text-green-600 text-xs font-semibold">
+          {playerValue}
+        </span>
 
-        <div className="flex-1 h-2 bg-gray-200 rounded">
-          <div className="h-2 bg-green-600 rounded-l" style={{ width: `${playerPct}%` }} />
+        {/* BAR */}
+        <div className="flex-1 h-2 bg-gray-200 rounded overflow-hidden flex">
+          {/* PLAYER SIDE */}
+          <div
+            className="h-2 bg-green-600 transition-all duration-300"
+            style={{ width: `${playerPct}%` }}
+          />
+
+          {/* OPPONENT SIDE */}
+          <div
+            className="h-2 bg-orange-400 transition-all duration-300"
+            style={{ width: `${opponentPct}%` }}
+          />
         </div>
 
-        <span className="text-orange-400 text-xs">{opponentValue}</span>
+        {/* OPPONENT VALUE */}
+        <span className="text-orange-400 text-xs font-semibold">
+          {opponentValue}
+        </span>
+      </div>
+
+      {/* OPTIONAL PERCENTAGES */}
+      <div className="flex justify-between text-[10px] text-gray-400">
+        <span>{playerPct.toFixed(0)}%</span>
+        <span>{opponentPct.toFixed(0)}%</span>
       </div>
     </div>
   );
