@@ -7,10 +7,11 @@ import {
   Plus,
   Trophy,
   TrendingUp,
-  Activity,
   Flame,
+  Activity,
 } from "lucide-react";
 import { computeStats } from "../../../lib/stats";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -36,13 +37,11 @@ export default function DashboardPage() {
   const winRate =
     matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0;
 
-  const ongoingMatches = matches.filter((m) => m.status === "En cours");
   const finishedMatches = matches.filter((m) => m.status === "Terminé");
 
   // ---------------- STREAK ----------------
   let currentStreak = 0;
   const sortedMatches = [...finishedMatches].reverse();
-
   for (const m of sortedMatches) {
     if (m.winner === "player") currentStreak++;
     else break;
@@ -90,7 +89,6 @@ export default function DashboardPage() {
 
   const acesPerMatch = (player.aces / totalMatches).toFixed(1);
   const dfPerMatch = (player.doubleFaults / totalMatches).toFixed(1);
-  const errorsPerMatch = (totalErrors / totalMatches).toFixed(1);
 
   // ---------------- SERVICE ----------------
   let servePoints = 0;
@@ -106,6 +104,15 @@ export default function DashboardPage() {
   const servePct =
     servePoints > 0 ? Math.round((serveWon / servePoints) * 100) : 0;
 
+  // ---------------- MINI GRAPH DATA ----------------
+  const graphData = [
+    { label: "Winners", value: player.winners },
+    { label: "UE", value: player.unforcedErrors },
+    { label: "FE", value: player.forcedErrors },
+  ];
+
+  const maxGraph = Math.max(...graphData.map((d) => d.value), 1);
+
   // ---------------- UI ----------------
   return (
     <div className="max-w-2xl px-4 py-6 mx-auto mb-20">
@@ -113,132 +120,104 @@ export default function DashboardPage() {
         🎾 Tableau de bord
       </h1>
 
-      {/* TOP STATS */}
+      {/* TOP */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <Stat
-          icon={<Trophy className="w-5 h-5 text-yellow-500" />}
-          value={wins}
-          label="Victoires"
-        />
-        <Stat
-          icon={<TrendingUp className="w-5 h-5 text-green-600" />}
-          value={winRate + "%"}
-          label="Win rate"
-        />
-        <Stat
-          icon={<Flame className="w-5 h-5 text-orange-500" />}
-          value={currentStreak}
-          label="Streak 🔥"
-        />
+        <Stat icon={<Trophy />} value={wins} label="Victoires" />
+        <Stat icon={<TrendingUp />} value={winRate + "%"} label="Win rate" />
+        <Stat icon={<Flame />} value={currentStreak} label="Streak 🔥" />
       </div>
 
-      {/* INTERACTIVE STATS */}
+      {/* INTERACTIVE */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <Stat
-          label="Ratio W/F"
+          label="Ratio"
           value={ratioWF}
-          onClick={() => setSelectedStat("ratio")}
           active={selectedStat === "ratio"}
+          onClick={() => setSelectedStat("ratio")}
         />
         <Stat
           label="Service"
           value={servePct + "%"}
-          onClick={() => setSelectedStat("service")}
           active={selectedStat === "service"}
+          onClick={() => setSelectedStat("service")}
         />
         <Stat
           label="Fautes"
-          value={errorsPerMatch}
-          onClick={() => setSelectedStat("errors")}
+          value={totalErrors}
           active={selectedStat === "errors"}
+          onClick={() => setSelectedStat("errors")}
         />
       </div>
 
-      {/* DYNAMIC DETAIL */}
-      {selectedStat && (
-        <div className="p-4 mb-6 border border-gray-600 rounded-2xl bg-gray-800/50">
-          {selectedStat === "ratio" && (
-            <>
-              <p className="mb-2 font-semibold">🎯 Ratio Winners / Fautes</p>
-              <p>Winners : {player.winners}</p>
-              <p>Fautes directes : {player.unforcedErrors}</p>
-              <p>Fautes provoquées : {player.forcedErrors}</p>
-            </>
-          )}
-
-          {selectedStat === "service" && (
-            <>
-              <p className="mb-2 font-semibold">⚡ Service</p>
-              <p>% points gagnés : {servePct}%</p>
-              <p>Aces / match : {acesPerMatch}</p>
-              <p>Doubles fautes / match : {dfPerMatch}</p>
-            </>
-          )}
-
-          {selectedStat === "errors" && (
-            <>
-              <p className="mb-2 font-semibold">⚠️ Fautes</p>
-              <p>Total fautes : {totalErrors}</p>
-              <p>Par match : {errorsPerMatch}</p>
-              <p>Fautes directes : {player.unforcedErrors}</p>
-            </>
-          )}
-
-          <button
-            onClick={() => setSelectedStat(null)}
-            className="mt-3 text-xs text-gray-400 underline"
+      {/* DYNAMIC PANEL */}
+      <AnimatePresence mode="wait">
+        {selectedStat && (
+          <motion.div
+            key={selectedStat}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="p-5 mb-6 border border-gray-700 shadow-lg rounded-2xl bg-gray-900/60 backdrop-blur"
           >
-            Masquer
-          </button>
-        </div>
-      )}
+            {selectedStat === "ratio" && (
+              <>
+                <p className="mb-3 font-semibold">🎯 Ratio Winners / Fautes</p>
 
-      {/* SECONDARY MINI STATS */}
-      <div className="grid grid-cols-3 gap-3 mb-10">
-        <MiniStat label="Aces/match" value={acesPerMatch} />
-        <MiniStat label="DF/match" value={dfPerMatch} />
-        <MiniStat label="Matchs" value={matches.length} />
-      </div>
+                <MiniBarChart data={graphData} max={maxGraph} />
 
-      {/* NEW MATCH */}
+                <p className="mt-3 text-sm text-gray-400">
+                  {player.winners} winners pour{" "}
+                  {player.unforcedErrors} fautes directes
+                </p>
+              </>
+            )}
+
+            {selectedStat === "service" && (
+              <>
+                <p className="mb-3 font-semibold">⚡ Service</p>
+                <MiniBar
+                  label="Points gagnés"
+                  value={servePct}
+                  suffix="%"
+                />
+                <MiniBar label="Aces/match" value={acesPerMatch} />
+                <MiniBar label="DF/match" value={dfPerMatch} />
+              </>
+            )}
+
+            {selectedStat === "errors" && (
+              <>
+                <p className="mb-3 font-semibold">⚠️ Fautes</p>
+                <MiniBar label="Total" value={totalErrors} />
+                <MiniBar
+                  label="Directes"
+                  value={player.unforcedErrors}
+                />
+                <MiniBar
+                  label="Provoquées"
+                  value={player.forcedErrors}
+                />
+              </>
+            )}
+
+            <button
+              onClick={() => setSelectedStat(null)}
+              className="mt-4 text-xs text-gray-400 underline"
+            >
+              Fermer
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CTA */}
       <Link
         href="/new-match"
         className="flex items-center justify-center w-full h-12 gap-2 mb-10 font-semibold border rounded-2xl text-cyan-300/50 border-cyan-300/50 hover:bg-cyan-300/50 hover:text-white"
       >
         <Plus className="w-4 h-4" /> Nouveau match
       </Link>
-
-      {/* MATCH LIST */}
-      <h2 className="mb-2 text-sm text-cyan-300/60">Matchs récents</h2>
-
-      {loading ? (
-        <p className="py-8 text-center text-gray-400">Chargement...</p>
-      ) : matches.length === 0 ? (
-        <div className="py-12 text-center text-gray-400">
-          <div className="mb-2 text-4xl">🎾</div>
-          <p>Aucun match</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div>
-            <h2 className="mb-2 text-sm text-green-400/70">En cours</h2>
-            {ongoingMatches.length === 0 ? (
-              <p className="text-sm text-gray-500">Aucun</p>
-            ) : (
-              ongoingMatches.map((m) => (
-                <MatchItem key={m._id} match={m} />
-              ))
-            )}
-          </div>
-
-          <div>
-            <h2 className="mb-2 text-sm text-red-400/70">Terminés</h2>
-            {finishedMatches.map((m) => (
-              <MatchItem key={m._id} match={m} />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -248,41 +227,54 @@ function Stat({ icon, value, label, onClick, active }) {
   return (
     <div
       onClick={onClick}
-      className={`p-4 text-center rounded-2xl cursor-pointer transition
-      ${active ? "bg-cyan-500/20 border border-cyan-400" : "bg-gray-700/50 hover:bg-gray-700/80"}`}
+      className={`p-4 rounded-2xl cursor-pointer transition text-center
+      ${
+        active
+          ? "bg-cyan-500/20 border border-cyan-400 scale-105"
+          : "bg-gray-800/60 hover:bg-gray-700/80"
+      }`}
     >
       {icon && <div className="flex justify-center mb-1">{icon}</div>}
-      <p className="text-xl font-bold text-gray-300">{value}</p>
+      <p className="text-xl font-bold text-white">{value}</p>
       <p className="text-xs text-gray-400">{label}</p>
     </div>
   );
 }
 
-function MiniStat({ label, value }) {
+function MiniBar({ label, value, suffix = "" }) {
   return (
-    <div className="p-3 text-center bg-gray-800/50 rounded-xl">
-      <p className="text-sm font-semibold text-gray-300">{value}</p>
-      <p className="text-xs text-gray-400">{label}</p>
-    </div>
-  );
-}
-
-function MatchItem({ match: m }) {
-  return (
-    <Link
-      href={"/match/" + m._id}
-      className="flex justify-between p-4 rounded-2xl bg-gray-900/30 hover:bg-gray-900/70"
-    >
-      <div>
-        <p className="text-sm text-cyan-300">
-          {m.player_name} vs {m.opponent_name}
-        </p>
-        <p className="text-xs text-gray-400">{m.surface}</p>
+    <div className="mb-2">
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>{label}</span>
+        <span>
+          {value}
+          {suffix}
+        </span>
       </div>
+      <div className="h-2 mt-1 bg-gray-700 rounded">
+        <div
+          className="h-2 bg-cyan-400 rounded"
+          style={{ width: `${Math.min(value, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
-      {m.winner === "player" && (
-        <Trophy className="w-5 h-5 text-yellow-500" />
-      )}
-    </Link>
+function MiniBarChart({ data, max }) {
+  return (
+    <div className="flex items-end gap-3 h-24">
+      {data.map((d, i) => (
+        <div key={i} className="flex flex-col items-center flex-1">
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: `${(d.value / max) * 100}%` }}
+            transition={{ duration: 0.4 }}
+            className="w-full bg-cyan-400 rounded-t"
+          />
+          <span className="mt-1 text-xs text-gray-400">{d.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
