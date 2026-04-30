@@ -77,6 +77,16 @@ useEffect(() => {
     if (t.includes("winner") || t.includes("coup")) return "winner";
     return type;
   }
+const normalizedPoints = points
+  .filter((p) => !p.is_deleted)
+  .map((p) => ({
+    ...p,
+    shot_type: normalizeShotType(p.shot_type || p.type),
+    stroke_type: p.stroke_type || null,
+    point_winner: p.point_winner,
+    is_deleted: p.is_deleted || false,
+    score: safeParse(p.score_at_point),
+  }));
 
   function safeParse(str) {
     try {
@@ -86,13 +96,16 @@ useEffect(() => {
     }
   }
 
-  const normalizedPoints = points
-    .filter((p) => !p.is_deleted)
-    .map((p) => ({
-      ...p,
-      shot_type: normalizeShotType(p.shot_type),
-      score: safeParse(p.score_at_point),
-    }));
+const normalizedPoints = points
+  .filter((p) => !p.is_deleted)
+  .map((p) => ({
+    ...p,
+    shot_type: normalizeShotType(p.shot_type || p.type),
+    stroke_type: p.stroke_type || null,
+    point_winner: p.point_winner,
+    is_deleted: p.is_deleted || false,
+    score: safeParse(p.score_at_point),
+  }));
 
   // ---------------- GLOBAL STATS ----------------
   const stats = computeStats(normalizedPoints);
