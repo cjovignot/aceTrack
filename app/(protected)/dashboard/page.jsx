@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState([]);
   const [points, setPoints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStat, setSelectedStat] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -30,7 +31,7 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ---------------- BASIC STATS ----------------
+  // ---------------- BASIC ----------------
   const wins = matches.filter((m) => m.winner === "player").length;
   const winRate =
     matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0;
@@ -125,36 +126,78 @@ export default function DashboardPage() {
           label="Win rate"
         />
         <Stat
-          icon={<Activity className="w-5 h-5 text-blue-500" />}
-          value={matches.length}
-          label="Matchs"
-        />
-      </div>
-
-      {/* ADVANCED STATS */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <Stat
           icon={<Flame className="w-5 h-5 text-orange-500" />}
           value={currentStreak}
           label="Streak 🔥"
         />
+      </div>
+
+      {/* INTERACTIVE STATS */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <Stat
-          icon={<TrendingUp className="w-5 h-5 text-cyan-400" />}
-          value={ratioWF}
           label="Ratio W/F"
+          value={ratioWF}
+          onClick={() => setSelectedStat("ratio")}
+          active={selectedStat === "ratio"}
         />
         <Stat
-          icon={<Activity className="w-5 h-5 text-purple-400" />}
-          value={servePct + "%"}
           label="Service"
+          value={servePct + "%"}
+          onClick={() => setSelectedStat("service")}
+          active={selectedStat === "service"}
+        />
+        <Stat
+          label="Fautes"
+          value={errorsPerMatch}
+          onClick={() => setSelectedStat("errors")}
+          active={selectedStat === "errors"}
         />
       </div>
 
-      {/* SECONDARY STATS */}
+      {/* DYNAMIC DETAIL */}
+      {selectedStat && (
+        <div className="p-4 mb-6 border border-gray-600 rounded-2xl bg-gray-800/50">
+          {selectedStat === "ratio" && (
+            <>
+              <p className="mb-2 font-semibold">🎯 Ratio Winners / Fautes</p>
+              <p>Winners : {player.winners}</p>
+              <p>Fautes directes : {player.unforcedErrors}</p>
+              <p>Fautes provoquées : {player.forcedErrors}</p>
+            </>
+          )}
+
+          {selectedStat === "service" && (
+            <>
+              <p className="mb-2 font-semibold">⚡ Service</p>
+              <p>% points gagnés : {servePct}%</p>
+              <p>Aces / match : {acesPerMatch}</p>
+              <p>Doubles fautes / match : {dfPerMatch}</p>
+            </>
+          )}
+
+          {selectedStat === "errors" && (
+            <>
+              <p className="mb-2 font-semibold">⚠️ Fautes</p>
+              <p>Total fautes : {totalErrors}</p>
+              <p>Par match : {errorsPerMatch}</p>
+              <p>Fautes directes : {player.unforcedErrors}</p>
+            </>
+          )}
+
+          <button
+            onClick={() => setSelectedStat(null)}
+            className="mt-3 text-xs text-gray-400 underline"
+          >
+            Masquer
+          </button>
+        </div>
+      )}
+
+      {/* SECONDARY MINI STATS */}
       <div className="grid grid-cols-3 gap-3 mb-10">
-        <Stat label="Aces/match" value={acesPerMatch} />
-        <Stat label="DF/match" value={dfPerMatch} />
-        <Stat label="Fautes/match" value={errorsPerMatch} />
+        <MiniStat label="Aces/match" value={acesPerMatch} />
+        <MiniStat label="DF/match" value={dfPerMatch} />
+        <MiniStat label="Matchs" value={matches.length} />
       </div>
 
       {/* NEW MATCH */}
@@ -177,7 +220,6 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* ONGOING */}
           <div>
             <h2 className="mb-2 text-sm text-green-400/70">En cours</h2>
             {ongoingMatches.length === 0 ? (
@@ -189,16 +231,11 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* FINISHED */}
           <div>
             <h2 className="mb-2 text-sm text-red-400/70">Terminés</h2>
-            {finishedMatches.length === 0 ? (
-              <p className="text-sm text-gray-500">Aucun</p>
-            ) : (
-              finishedMatches.map((m) => (
-                <MatchItem key={m._id} match={m} />
-              ))
-            )}
+            {finishedMatches.map((m) => (
+              <MatchItem key={m._id} match={m} />
+            ))}
           </div>
         </div>
       )}
@@ -207,11 +244,24 @@ export default function DashboardPage() {
 }
 
 // ---------------- COMPONENTS ----------------
-function Stat({ icon, value, label }) {
+function Stat({ icon, value, label, onClick, active }) {
   return (
-    <div className="p-4 text-center bg-gray-700/50 rounded-2xl">
+    <div
+      onClick={onClick}
+      className={`p-4 text-center rounded-2xl cursor-pointer transition
+      ${active ? "bg-cyan-500/20 border border-cyan-400" : "bg-gray-700/50 hover:bg-gray-700/80"}`}
+    >
       {icon && <div className="flex justify-center mb-1">{icon}</div>}
       <p className="text-xl font-bold text-gray-300">{value}</p>
+      <p className="text-xs text-gray-400">{label}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="p-3 text-center bg-gray-800/50 rounded-xl">
+      <p className="text-sm font-semibold text-gray-300">{value}</p>
       <p className="text-xs text-gray-400">{label}</p>
     </div>
   );
