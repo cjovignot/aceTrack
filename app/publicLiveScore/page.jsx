@@ -278,7 +278,7 @@ export default function PublicLiveScore() {
 
                 {/* SCORE */}
                 <div className="flex flex-col justify-between">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     {m.score.sets_player.map((s, i) => {
                       const opponentScore = m.score.sets_opponent[i];
                       const isHigher = s > opponentScore;
@@ -296,7 +296,7 @@ export default function PublicLiveScore() {
                     })}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     {m.score.sets_opponent.map((s, i) => {
                       const playerScore = m.score.sets_player[i];
                       const isHigher = s > playerScore;
