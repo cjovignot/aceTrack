@@ -312,8 +312,8 @@ function StatBar({ label, playerValue, opponentValue }) {
 
       {/* OPTIONAL PERCENTAGES */}
       <div className="flex justify-between text-[10px] text-gray-400">
-        <span>{playerPct.toFixed(0)}%</span>
-        <span>{opponentPct.toFixed(0)}%</span>
+        <span className="text-green-600">{playerPct.toFixed(0)}%</span>
+        <span className="text-orange-400">{opponentPct.toFixed(0)}%</span>
       </div>
     </div>
   );
