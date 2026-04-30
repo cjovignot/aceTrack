@@ -19,17 +19,38 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedStat, setSelectedStat] = useState(null);
 
-  useEffect(() => {
-    Promise.all([
-      api.get("/api/matches"),
-      api.get("/api/points").catch(() => ({ data: [] })),
-    ])
-      .then(([m, p]) => {
-        setMatches(m.data);
-        setPoints(p.data || []);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+useEffect(() => {
+  async function fetchData() {
+    try {
+      // 1. Récupérer les matchs
+      const matchRes = await api.get("/api/matches");
+      const matchesData = matchRes.data || [];
+
+      setMatches(matchesData);
+
+      // 2. Récupérer les points de CHAQUE match
+      const pointsPromises = matchesData.map((m) =>
+        api
+          .get(`/api/points?match_id=${m._id}`)
+          .then((res) => res.data || [])
+          .catch(() => [])
+      );
+
+      const pointsPerMatch = await Promise.all(pointsPromises);
+
+      // 3. Flatten
+      const allPoints = pointsPerMatch.flat();
+
+      setPoints(allPoints);
+    } catch (err) {
+      console.error("Erreur chargement dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchData();
+}, []);
 
   // ---------------- BASIC ----------------
   const wins = matches.filter((m) => m.winner === "player").length;
