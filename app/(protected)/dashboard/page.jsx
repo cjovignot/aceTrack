@@ -8,7 +8,6 @@ import {
   Trophy,
   TrendingUp,
   Flame,
-  Activity,
 } from "lucide-react";
 import { computeStats } from "../../../lib/stats";
 import { motion, AnimatePresence } from "framer-motion";
@@ -104,7 +103,7 @@ export default function DashboardPage() {
   const servePct =
     servePoints > 0 ? Math.round((serveWon / servePoints) * 100) : 0;
 
-  // ---------------- MINI GRAPH DATA ----------------
+  // ---------------- GRAPH ----------------
   const graphData = [
     { label: "Winners", value: player.winners },
     { label: "UE", value: player.unforcedErrors },
@@ -120,14 +119,14 @@ export default function DashboardPage() {
         🎾 Tableau de bord
       </h1>
 
-      {/* TOP */}
+      {/* TOP STATS */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <Stat icon={<Trophy />} value={wins} label="Victoires" />
         <Stat icon={<TrendingUp />} value={winRate + "%"} label="Win rate" />
         <Stat icon={<Flame />} value={currentStreak} label="Streak 🔥" />
       </div>
 
-      {/* INTERACTIVE */}
+      {/* INTERACTIVE STATS */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <Stat
           label="Ratio"
@@ -149,7 +148,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* DYNAMIC PANEL */}
+      {/* DETAIL PANEL */}
       <AnimatePresence mode="wait">
         {selectedStat && (
           <motion.div
@@ -162,25 +161,15 @@ export default function DashboardPage() {
           >
             {selectedStat === "ratio" && (
               <>
-                <p className="mb-3 font-semibold">🎯 Ratio Winners / Fautes</p>
-
+                <p className="mb-3 font-semibold">🎯 Ratio W/F</p>
                 <MiniBarChart data={graphData} max={maxGraph} />
-
-                <p className="mt-3 text-sm text-gray-400">
-                  {player.winners} winners pour{" "}
-                  {player.unforcedErrors} fautes directes
-                </p>
               </>
             )}
 
             {selectedStat === "service" && (
               <>
                 <p className="mb-3 font-semibold">⚡ Service</p>
-                <MiniBar
-                  label="Points gagnés"
-                  value={servePct}
-                  suffix="%"
-                />
+                <MiniBar label="Points gagnés" value={servePct} suffix="%" />
                 <MiniBar label="Aces/match" value={acesPerMatch} />
                 <MiniBar label="DF/match" value={dfPerMatch} />
               </>
@@ -190,14 +179,8 @@ export default function DashboardPage() {
               <>
                 <p className="mb-3 font-semibold">⚠️ Fautes</p>
                 <MiniBar label="Total" value={totalErrors} />
-                <MiniBar
-                  label="Directes"
-                  value={player.unforcedErrors}
-                />
-                <MiniBar
-                  label="Provoquées"
-                  value={player.forcedErrors}
-                />
+                <MiniBar label="Directes" value={player.unforcedErrors} />
+                <MiniBar label="Provoquées" value={player.forcedErrors} />
               </>
             )}
 
@@ -218,6 +201,41 @@ export default function DashboardPage() {
       >
         <Plus className="w-4 h-4" /> Nouveau match
       </Link>
+
+      {/* MATCH LIST */}
+      <h2 className="mb-2 text-sm text-cyan-300/60">Matchs récents</h2>
+
+      {loading ? (
+        <p className="py-8 text-center text-gray-400">Chargement...</p>
+      ) : matches.length === 0 ? (
+        <div className="py-12 text-center text-gray-400">
+          <div className="mb-2 text-4xl">🎾</div>
+          <p>Aucun match</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="space-y-6"
+        >
+          {/* EN COURS */}
+          <div>
+            <h3 className="mb-2 text-sm text-green-400/70">En cours</h3>
+            {matches.filter((m) => m.status === "En cours").map((m) => (
+              <MatchItem key={m._id} match={m} />
+            ))}
+          </div>
+
+          {/* TERMINÉS */}
+          <div>
+            <h3 className="mb-2 text-sm text-red-400/70">Terminés</h3>
+            {matches.filter((m) => m.status === "Terminé").map((m) => (
+              <MatchItem key={m._id} match={m} />
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -227,12 +245,8 @@ function Stat({ icon, value, label, onClick, active }) {
   return (
     <div
       onClick={onClick}
-      className={`p-4 rounded-2xl cursor-pointer transition text-center
-      ${
-        active
-          ? "bg-cyan-500/20 border border-cyan-400 scale-105"
-          : "bg-gray-800/60 hover:bg-gray-700/80"
-      }`}
+      className={`p-4 rounded-2xl cursor-pointer text-center transition
+      ${active ? "bg-cyan-500/20 border border-cyan-400 scale-105" : "bg-gray-800/60 hover:bg-gray-700/80"}`}
     >
       {icon && <div className="flex justify-center mb-1">{icon}</div>}
       <p className="text-xl font-bold text-white">{value}</p>
@@ -246,10 +260,7 @@ function MiniBar({ label, value, suffix = "" }) {
     <div className="mb-2">
       <div className="flex justify-between text-xs text-gray-400">
         <span>{label}</span>
-        <span>
-          {value}
-          {suffix}
-        </span>
+        <span>{value}{suffix}</span>
       </div>
       <div className="h-2 mt-1 bg-gray-700 rounded">
         <div
@@ -276,5 +287,30 @@ function MiniBarChart({ data, max }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function MatchItem({ match: m }) {
+  return (
+    <Link
+      href={"/match/" + m._id}
+      className="flex items-center justify-between p-4 mb-2 rounded-2xl bg-gray-900/40 hover:bg-gray-900/70"
+    >
+      <div>
+        <p className="text-sm text-cyan-300">
+          {m.player_name} vs {m.opponent_name}
+        </p>
+        <p className="text-xs text-gray-400">{m.surface}</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {m.winner === "player" && (
+          <Trophy className="w-5 h-5 text-yellow-500" />
+        )}
+        {m.status === "En cours" && (
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+        )}
+      </div>
+    </Link>
   );
 }
