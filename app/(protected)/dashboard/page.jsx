@@ -72,12 +72,13 @@ export default function DashboardPage() {
     if (t.includes("winner") || t.includes("coup")) return "winner";
     return type;
   }
+
   const normalizedPoints = points
     .filter((p) => !p.is_deleted)
     .map((p) => ({
       ...p,
       shot_type: normalizeShotType(p.shot_type || p.type),
-      stroke_type: p.stroke_type || null,
+      extra_tag: normalizeTag(p.extra_tag),
       point_winner: p.point_winner,
       is_deleted: p.is_deleted || false,
       score: safeParse(p.score_at_point),
@@ -123,6 +124,20 @@ export default function DashboardPage() {
     return "❌ Trop de fautes";
   }
 
+  // ---------------- TAGS ----------------
+  function normalizeTag(tag) {
+    if (!tag) return null;
+
+    const t = tag.toLowerCase();
+
+    if (t.includes("forehand")) return "forehand";
+    if (t.includes("backhand")) return "backhand";
+    if (t.includes("serve")) return "serve_winner";
+    if (t.includes("return")) return "return_winner";
+
+    return null;
+  }
+
   // ---------------- SERVICE ----------------
   let servePoints = 0;
   let serveWon = 0;
@@ -142,7 +157,14 @@ export default function DashboardPage() {
     { label: "Coups gagnant", value: player.winners },
     { label: "Fautes directes", value: player.unforcedErrors },
     { label: "Fautes provoquées", value: player.forcedErrors },
+    { label: "Fautes coup droit", value: player.forehandErrors },
+    { label: "Fautes revers", value: player.backhandErrors },
   ];
+
+  const forehandErrorRate =
+    player.forehandErrors + player.backhandErrors > 0
+      ? player.forehandErrors / (player.forehandErrors + player.backhandErrors)
+      : 0;
 
   const maxGraph = Math.max(...graphData.map((d) => d.value), 1);
 
@@ -265,6 +287,10 @@ export default function DashboardPage() {
                     <MiniBar
                       label="Fautes directes"
                       value={player.unforcedErrors}
+                    />
+                    <MiniBar
+                      label="Ratio Fautes CD/RV"
+                      value={forehandErrorRate}
                     />
                   </div>
 
