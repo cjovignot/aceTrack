@@ -207,6 +207,7 @@ export default function WatchPage() {
 
     const item = queueRef.current.shift();
 
+    try {
     const res = await fetch("/api/points", {
       method: "POST",
       headers: {
@@ -220,16 +221,6 @@ export default function WatchPage() {
     if (data?._id) {
       lastCreatedPointIdRef.current = data._id;
     }
-
-    try {
-      await fetch("/api/points", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-        body: JSON.stringify(item),
-      });
     } catch (e) {
       queueRef.current.unshift(item);
     }
