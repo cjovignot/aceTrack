@@ -101,9 +101,9 @@ export default function DashboardPage() {
   const totalErrors = player.unforcedErrors + player.forcedErrors;
 
   const ratioWF =
-    player.unforcedErrors > 0
-      ? (player.winners / player.unforcedErrors).toFixed(2)
-      : player.winners;
+    ((player.winners / (player.winners + player.unforcedErrors)) * 100).toFixed(
+      1,
+    ) + "%";
 
   const acesPerMatch = (player.aces / totalMatches).toFixed(1);
   const dfPerMatch = (player.doubleFaults / totalMatches).toFixed(1);
@@ -161,10 +161,15 @@ export default function DashboardPage() {
     { label: "Fautes revers", value: player.backhandErrors },
   ];
 
+  // ---------------- ERROR RATE ----------------
+  const forehandShots = player.forehandWinners + player.forehandErrors;
+
+  const backhandShots = player.backhandWinners + player.backhandErrors;
+
   const forehandErrorRate =
-    player.forehandErrors + player.backhandErrors > 0
-      ? player.forehandErrors / (player.forehandErrors + player.backhandErrors)
-      : 0;
+    forehandShots > 0 ? (player.forehandErrors / forehandShots) * 100 : 0;
+  const backhandErrorRate =
+    backhandShots > 0 ? (player.backhandErrors / backhandShots) * 100 : 0;
 
   const maxGraph = Math.max(...graphData.map((d) => d.value), 1);
 
@@ -289,8 +294,12 @@ export default function DashboardPage() {
                       value={player.unforcedErrors}
                     />
                     <MiniBar
-                      label="Ratio Fautes CD/RV"
+                      label="% Fautes Coups droit"
                       value={forehandErrorRate}
+                    />
+                    <MiniBar
+                      label="% Fautes Revers"
+                      value={backhandErrorRate}
                     />
                   </div>
 
@@ -302,6 +311,10 @@ export default function DashboardPage() {
                     <MiniBar
                       label="Fautes provoquées"
                       value={player.forcedErrors}
+                    />
+                    <MiniBar
+                      label="Fautes directes"
+                      value={player.unforcedErrors}
                     />
                   </div>
                 </div>
@@ -415,26 +428,26 @@ function MiniBarChart({ data, max }) {
 
   return (
     <div className="grid w-full grid-cols-3 gap-3 mt-4">
-      {/* ROW 1 → CHART */}
       {data.map((d, i) => (
-        <div key={"bar-" + i} className="flex items-end justify-center h-24">
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{
-              height: Math.max((d.value / max) * chartHeight, 4),
-            }}
-            transition={{ duration: 0.4 }}
-            className="relative flex items-start justify-center w-6 text-xs text-white rounded-t bg-cyan-400"
-          >
-            <p className="absolute -top-5">{d.value}</p>
-          </motion.div>
-        </div>
-      ))}
+        <div key={i} className="flex flex-col items-center">
+          {/* BAR */}
+          <div className="flex items-end justify-center h-24">
+            <motion.div
+              initial={{ height: 0 }}
+              animate={{
+                height: Math.max((d.value / max) * chartHeight, 4),
+              }}
+              transition={{ duration: 0.4 }}
+              className="relative flex items-start justify-center w-6 text-xs text-white rounded-t bg-cyan-400"
+            >
+              <p className="absolute -top-5">{d.value}</p>
+            </motion.div>
+          </div>
 
-      {/* ROW 2 → LABELS */}
-      {data.map((d, i) => (
-        <div key={"label-" + i} className="text-xs text-center text-gray-400">
-          {d.label}
+          {/* LABEL */}
+          <div className="mt-1 text-xs text-center text-gray-400">
+            {d.label}
+          </div>
         </div>
       ))}
     </div>

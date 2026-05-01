@@ -137,8 +137,8 @@ export async function PATCH(request, { params }) {
     const allowedTags = [
       "serve_winner",
       "return_winner",
-      "forehand_winner",
-      "backhand_winner",
+      "forehand",
+      "backhand",
     ];
 
     if (!allowedTags.includes(body.extra_tag)) {

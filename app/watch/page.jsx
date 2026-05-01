@@ -64,6 +64,53 @@ export default function WatchPage() {
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
+  // ---------- SIMULATE SWIPES WITH KEYBOARD ARROWS ----------
+  useEffect(() => {
+    function handleKey(e) {
+      if (!lastCreatedPointIdRef.current) return;
+
+      let tag = null;
+
+      switch (e.key) {
+        case "ArrowRight":
+          tag = "backhand";
+          break;
+        case "ArrowLeft":
+          tag = "forehand";
+          break;
+        case "ArrowUp":
+          tag = "serve_winner";
+          break;
+        case "ArrowDown":
+          tag = "return_winner";
+          break;
+        default:
+          return;
+      }
+
+      if (!tag || !lastCreatedPointIdRef.current) return;
+
+      try {
+        fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-pairing-token": pairingToken,
+          },
+          body: JSON.stringify({
+            extra_tag: tag,
+          }),
+        });
+      } catch (e) {
+        console.error("Gesture tag failed", e);
+      }
+    }
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [pairingToken]);
+
+  // ---------- SCROLL PREVENT ----------
   useEffect(() => {
     const preventScroll = (e) => e.preventDefault();
 
@@ -86,7 +133,7 @@ export default function WatchPage() {
     setTimeout(fix, 200);
   }, []);
 
-  // ---------- INIT ----------
+  // ---------- INIT PAIRING ----------
   useEffect(() => {
     if (hasStarted.current) return;
     hasStarted.current = true;
@@ -417,7 +464,7 @@ export default function WatchPage() {
     let tag = null;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      tag = dx > 0 ? "forehand" : "backhand";
+      tag = dx > 0 ? "backhand" : "forehand";
     } else {
       tag = dy < 0 ? "serve_winner" : "return_winner";
     }
