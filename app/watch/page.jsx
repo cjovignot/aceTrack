@@ -198,15 +198,16 @@ export default function WatchPage() {
         : null;
 
   // ---------- QUEUE ----------
-  async function flushQueue() {
-    if (sendingRef.current) return;
-    if (queueRef.current.length === 0) return;
-    if (match?.status === "Terminé") return;
+async function flushQueue() {
+  if (sendingRef.current) return;
+  if (queueRef.current.length === 0) return;
+  if (match?.status === "Terminé") return;
 
-    sendingRef.current = true;
+  sendingRef.current = true;
 
-    const item = queueRef.current.shift();
+  const item = queueRef.current.shift();
 
+  try {
     const res = await fetch("/api/points", {
       method: "POST",
       headers: {
@@ -217,26 +218,19 @@ export default function WatchPage() {
     });
 
     const data = await res.json();
+
     if (data?._id) {
       lastCreatedPointIdRef.current = data._id;
     }
 
-    try {
-      await fetch("/api/points", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-        body: JSON.stringify(item),
-      });
-    } catch (e) {
-      queueRef.current.unshift(item);
-    }
-
-    sendingRef.current = false;
-    setTimeout(flushQueue, 0);
+  } catch (e) {
+    // retry
+    queueRef.current.unshift(item);
   }
+
+  sendingRef.current = false;
+  setTimeout(flushQueue, 0);
+}
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
@@ -433,21 +427,31 @@ export default function WatchPage() {
 
     if (!tag || !lastCreatedPointIdRef.current) return;
 
-    try {
-      await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-pairing-token": pairingToken,
-        },
-        body: JSON.stringify({
-          extra_tag: tag,
-        }),
-      });
-    } catch (e) {
-      console.error("Gesture tag failed", e);
-    }
+try {
+  await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-pairing-token": pairingToken,
+    },
+    body: JSON.stringify({
+      extra_tag: tag,
+    }),
+  });
+
+  // ✅ vibration succès
+  if (navigator.vibrate) {
+    navigator.vibrate(30); // vibration courte
   }
+
+} catch (e) {
+  console.error("Gesture tag failed", e);
+
+  // ❌ vibration erreur (optionnel)
+  if (navigator.vibrate) {
+    navigator.vibrate([60, 40, 60]); // pattern erreur
+  }
+}
 
   // ---------- DERIVED ----------
   const score = match?.score || {};
