@@ -198,7 +198,7 @@ export default function WatchPage() {
         : null;
 
   // ---------- QUEUE ----------
-async function flushQueue() {
+  async function flushQueue() {
     if (sendingRef.current) return;
     if (queueRef.current.length === 0) return;
     if (match?.status === "Terminé") return;
@@ -433,271 +433,273 @@ async function flushQueue() {
 
     if (!tag || !lastCreatedPointIdRef.current) return;
 
-try {
-  await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-pairing-token": pairingToken,
-    },
-    body: JSON.stringify({
-      extra_tag: tag,
-    }),
-  });
+    try {
+      await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify({
+          extra_tag: tag,
+        }),
+      });
 
-  // ✅ vibration succès
-  if (navigator.vibrate) {
-    navigator.vibrate(30); // vibration courte
-  }
+      // ✅ vibration succès
+      if (navigator.vibrate) {
+        navigator.vibrate(30); // vibration courte
+      }
+    } catch (e) {
+      console.error("Gesture tag failed", e);
 
-} catch (e) {
-  console.error("Gesture tag failed", e);
+      // ❌ vibration erreur (optionnel)
+      if (navigator.vibrate) {
+        navigator.vibrate([60, 40, 60]); // pattern erreur
+      }
+    }
 
-  // ❌ vibration erreur (optionnel)
-  if (navigator.vibrate) {
-    navigator.vibrate([60, 40, 60]); // pattern erreur
-  }
-}
+    // ---------- DERIVED ----------
+    const score = match?.score || {};
+    const setsP = score.sets_player || [];
+    const setsO = score.sets_opponent || [];
+    const serving = score.serving;
+    const serveSide = getServeSide(score);
 
-  // ---------- DERIVED ----------
-  const score = match?.score || {};
-  const setsP = score.sets_player || [];
-  const setsO = score.sets_opponent || [];
-  const serving = score.serving;
-  const serveSide = getServeSide(score);
+    const cellBtn = (bg, active = false) => ({
+      background: active ? bg : "transparent",
+      color: active ? "#dad11f" : bg,
+      border: "solid 1px",
+      borderColor: bg,
+      borderRadius: 6,
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+      height: "100%",
+      userSelect: "none",
+    });
 
-  const cellBtn = (bg, active = false) => ({
-    background: active ? bg : "transparent",
-    color: active ? "#dad11f" : bg,
-    border: "solid 1px",
-    borderColor: bg,
-    borderRadius: 6,
-    fontWeight: 700,
-    fontSize: 14,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    height: "100%",
-    userSelect: "none",
-  });
-
-  return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      style={{
-        background: "#000",
-        color: "#fff",
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100dvh",
-        overflow: "hidden",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gridTemplateRows: "1fr 1fr 1fr 1fr",
-        gap: 3,
-        padding: 3,
-        touchAction: "manipulation",
-        overflow: "hidden",
-      }}
-    >
-      {/* QR CONNECT */}
-      {!isReady && pairingToken && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            zIndex: 9999,
-            background: "#000",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "end",
-            gap: 8,
-          }}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                `${window.location.origin}/connect?token=${pairingToken}`,
-              )}`}
-              width={210}
-              className="p-4 border border-green-400 rounded-xl"
-            />
-            <p className="w-3/4 pb-3 text-sm text-center text-green-400">
-              Scannez pour connecter la montre et saisir les scores
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
-      {isReady && (
-        <>
-          {startDate === null && (
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
-              <button
-                onClick={handleStartMatch}
-                className="relative px-10 py-6 transition-all duration-300 shadow-2xl rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-500 hover:scale-105 hover:shadow-yellow-500/40 active:scale-95"
-              >
-                <span className="relative z-10 text-sm font-semibold text-black">
-                  Démarrer le match
-                </span>
-
-                {/* Glow effect */}
-                <div className="absolute inset-0 transition-opacity duration-300 rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-400 blur-xl opacity-40 hover:opacity-70" />
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => scorePoint("player", "unforced_error", false)}
-            className="!rounded-tl-4xl"
-            style={cellBtn("#b32727")}
-          >
-            Faute
-          </button>
-
-          <button
-            onClick={() => scorePoint("opponent", "winner", true)}
-            style={cellBtn("#6296da")}
-          >
-            Gagnant
-          </button>
-
-          <div />
-
-          {/* 🔥 SERVER INDICATOR RESTAURÉ */}
+    return (
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          background: "#000",
+          color: "#fff",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100dvh",
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateRows: "1fr 1fr 1fr 1fr",
+          gap: 3,
+          padding: 3,
+          touchAction: "manipulation",
+          overflow: "hidden",
+        }}
+      >
+        {/* QR CONNECT */}
+        {!isReady && pairingToken && (
           <div
             style={{
-              gridColumn: "1 / 3",
-              gridRow: "2 / 4",
-              background: "#000000",
-              borderRadius: 6,
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              zIndex: 9999,
+              background: "#000",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "center",
               alignItems: "center",
-              position: "relative",
-              gap: 4,
+              justifyContent: "end",
+              gap: 8,
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: "#facc15",
-                ...(serving === "player"
-                  ? serveSide === "deuce"
-                    ? { bottom: 5, right: 5 }
-                    : { bottom: 5, left: 5 }
-                  : serveSide === "deuce"
-                    ? { top: 5, left: 5 }
-                    : { top: 5, right: 5 }),
-              }}
-            />
-
-            <div style={{ fontSize: 22 }}>
-              {setsO.map((s, i) => (
-                <span
-                  key={i}
-                  style={{
-                    margin: 4,
-                    color: s > setsP[i] ? "#facc15" : "#fff",
-                  }}
-                >
-                  {s}
-                </span>
-              ))}
-              <span style={{ color: "#facc15", fontSize: 28 }}>
-                {score.current_game_opponent || "0"}
-              </span>
-            </div>
-
-            <div style={{ width: "70%", height: 1, background: "#3c3c3c" }} />
-
-            <div style={{ fontSize: 22 }}>
-              {setsP.map((s, i) => (
-                <span
-                  key={i}
-                  style={{
-                    margin: 4,
-                    color: s > setsO[i] ? "#facc15" : "#fff",
-                  }}
-                >
-                  {s}
-                </span>
-              ))}
-              <span style={{ color: "#facc15", fontSize: 28 }}>
-                {score.current_game_player || "0"}
-              </span>
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                  `${window.location.origin}/connect?token=${pairingToken}`,
+                )}`}
+                width={210}
+                className="p-4 border border-green-400 rounded-xl"
+              />
+              <p className="w-3/4 pb-3 text-sm text-center text-green-400">
+                Scannez pour connecter la montre et saisir les scores
+              </p>
             </div>
           </div>
+        )}
 
-          <button
-            onClick={handleServiceFault}
-            style={serviceFaults > 0 ? cellBtn("#ed640f") : cellBtn("#ec9720")}
-          >
-            {serviceFaults > 0 ? "Double Faute" : "Faute service"}
-          </button>
+        {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
+        {isReady && (
+          <>
+            {startDate === null && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+                <button
+                  onClick={handleStartMatch}
+                  className="relative px-10 py-6 transition-all duration-300 shadow-2xl rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-500 hover:scale-105 hover:shadow-yellow-500/40 active:scale-95"
+                >
+                  <span className="relative z-10 text-sm font-semibold text-black">
+                    Démarrer le match
+                  </span>
 
-          <button
-            onClick={() => scorePoint(serving, "ace", true)}
-            style={cellBtn("#e2e629")}
-          >
-            Ace
-          </button>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 transition-opacity duration-300 rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-400 blur-xl opacity-40 hover:opacity-70" />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => scorePoint("player", "unforced_error", false)}
+              className="!rounded-tl-4xl"
+              style={cellBtn("#b32727")}
+            >
+              Faute
+            </button>
 
-          <button
-            onClick={() => scorePoint("opponent", "unforced_error", false)}
-            className="!rounded-bl-4xl"
-            style={cellBtn("#b32727")}
-          >
-            Faute
-          </button>
+            <button
+              onClick={() => scorePoint("opponent", "winner", true)}
+              style={cellBtn("#6296da")}
+            >
+              Gagnant
+            </button>
 
-          <button
-            onClick={() => scorePoint("player", "winner", true)}
-            style={cellBtn("#269351")}
-          >
-            Gagnant
-          </button>
+            <div />
 
-          <button
-            className="!rounded-br-4xl"
-            onClick={handleUndo}
-            style={cellBtn("#afc7f5")}
-          >
-            <IterationCw size={40} />
-          </button>
+            {/* 🔥 SERVER INDICATOR RESTAURÉ */}
+            <div
+              style={{
+                gridColumn: "1 / 3",
+                gridRow: "2 / 4",
+                background: "#000000",
+                borderRadius: 6,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                position: "relative",
+                gap: 4,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: "#facc15",
+                  ...(serving === "player"
+                    ? serveSide === "deuce"
+                      ? { bottom: 5, right: 5 }
+                      : { bottom: 5, left: 5 }
+                    : serveSide === "deuce"
+                      ? { top: 5, left: 5 }
+                      : { top: 5, right: 5 }),
+                }}
+              />
 
-          {isFinished && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
-              <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
-                <div className="grid gap-10">
-                  <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
-                    Match terminé
-                  </h1>
-                  <div className="grid gap-3">
-                    <p className="text-7xl">🏆</p>
-                    <h2 className="text-lg font-semibold text-gray-300">
-                      {winnerLabel && winnerLabel}
-                    </h2>
+              <div style={{ fontSize: 22 }}>
+                {setsO.map((s, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      margin: 4,
+                      color: s > setsP[i] ? "#facc15" : "#fff",
+                    }}
+                  >
+                    {s}
+                  </span>
+                ))}
+                <span style={{ color: "#facc15", fontSize: 28 }}>
+                  {score.current_game_opponent || "0"}
+                </span>
+              </div>
+
+              <div style={{ width: "70%", height: 1, background: "#3c3c3c" }} />
+
+              <div style={{ fontSize: 22 }}>
+                {setsP.map((s, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      margin: 4,
+                      color: s > setsO[i] ? "#facc15" : "#fff",
+                    }}
+                  >
+                    {s}
+                  </span>
+                ))}
+                <span style={{ color: "#facc15", fontSize: 28 }}>
+                  {score.current_game_player || "0"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleServiceFault}
+              style={
+                serviceFaults > 0 ? cellBtn("#ed640f") : cellBtn("#ec9720")
+              }
+            >
+              {serviceFaults > 0 ? "Double Faute" : "Faute service"}
+            </button>
+
+            <button
+              onClick={() => scorePoint(serving, "ace", true)}
+              style={cellBtn("#e2e629")}
+            >
+              Ace
+            </button>
+
+            <button
+              onClick={() => scorePoint("opponent", "unforced_error", false)}
+              className="!rounded-bl-4xl"
+              style={cellBtn("#b32727")}
+            >
+              Faute
+            </button>
+
+            <button
+              onClick={() => scorePoint("player", "winner", true)}
+              style={cellBtn("#269351")}
+            >
+              Gagnant
+            </button>
+
+            <button
+              className="!rounded-br-4xl"
+              onClick={handleUndo}
+              style={cellBtn("#afc7f5")}
+            >
+              <IterationCw size={40} />
+            </button>
+
+            {isFinished && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center px-3 py-6 bg-black/80 backdrop-blur-md">
+                <div className="flex flex-col items-center justify-around w-full h-full py-5 m-3 text-center border shadow-2xl px-7 rounded-4xl bg-white/10 border-white/20 animate-fadeIn">
+                  <div className="grid gap-10">
+                    <h1 className="text-xl font-bold tracking-wide text-yellow-400 uppercase">
+                      Match terminé
+                    </h1>
+                    <div className="grid gap-3">
+                      <p className="text-7xl">🏆</p>
+                      <h2 className="text-lg font-semibold text-gray-300">
+                        {winnerLabel && winnerLabel}
+                      </h2>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
 }
