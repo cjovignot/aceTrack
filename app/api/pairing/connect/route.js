@@ -27,7 +27,7 @@ export async function POST(req) {
     public_token: match.public_token,
   };
 
-  await redis.set(`pairing:${token}`, JSON.stringify(updated), { ex: 600 });
+  await redis.set(`pairing:${token}`, JSON.stringify(updated), { ex: 18000 });
 
   return Response.json({ success: true });
 }
