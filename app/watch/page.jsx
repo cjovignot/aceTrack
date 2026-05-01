@@ -208,19 +208,19 @@ export default function WatchPage() {
     const item = queueRef.current.shift();
 
     try {
-    const res = await fetch("/api/points", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-pairing-token": pairingToken,
-      },
-      body: JSON.stringify(item),
-    });
+      const res = await fetch("/api/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify(item),
+      });
 
-    const data = await res.json();
-    if (data?._id) {
-      lastCreatedPointIdRef.current = data._id;
-    }
+      const data = await res.json();
+      if (data?._id) {
+        lastCreatedPointIdRef.current = data._id;
+      }
     } catch (e) {
       queueRef.current.unshift(item);
     }
@@ -417,7 +417,7 @@ export default function WatchPage() {
     let tag = null;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      tag = dx > 0 ? "forehand_winner" : "backhand_winner";
+      tag = dx > 0 ? "forehand" : "backhand";
     } else {
       tag = dy < 0 ? "serve_winner" : "return_winner";
     }

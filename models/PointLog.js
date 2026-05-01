@@ -35,12 +35,7 @@ const schema = new mongoose.Schema(
 
     extra_tag: {
       type: String,
-      enum: [
-        "serve_winner",
-        "return_winner",
-        "forehand_winner",
-        "backhand_winner",
-      ],
+      enum: ["serve_winner", "return_winner", "forehand", "backhand"],
       default: null,
     },
 
