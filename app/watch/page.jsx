@@ -199,15 +199,14 @@ export default function WatchPage() {
 
   // ---------- QUEUE ----------
 async function flushQueue() {
-  if (sendingRef.current) return;
-  if (queueRef.current.length === 0) return;
-  if (match?.status === "Terminé") return;
+    if (sendingRef.current) return;
+    if (queueRef.current.length === 0) return;
+    if (match?.status === "Terminé") return;
 
-  sendingRef.current = true;
+    sendingRef.current = true;
 
-  const item = queueRef.current.shift();
+    const item = queueRef.current.shift();
 
-  try {
     const res = await fetch("/api/points", {
       method: "POST",
       headers: {
@@ -218,19 +217,26 @@ async function flushQueue() {
     });
 
     const data = await res.json();
-
     if (data?._id) {
       lastCreatedPointIdRef.current = data._id;
     }
 
-  } catch (e) {
-    // retry
-    queueRef.current.unshift(item);
-  }
+    try {
+      await fetch("/api/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify(item),
+      });
+    } catch (e) {
+      queueRef.current.unshift(item);
+    }
 
-  sendingRef.current = false;
-  setTimeout(flushQueue, 0);
-}
+    sendingRef.current = false;
+    setTimeout(flushQueue, 0);
+  }
 
   // ---------- SCORE ----------
   function scorePoint(winner, shotType = "winner", isWinner = true) {
