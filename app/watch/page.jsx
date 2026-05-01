@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { addPoint } from "@/lib/tennisScoring";
-import { IterationCw, Trophy } from "lucide-react";
-import { now } from "mongoose";
+import { IterationCw } from "lucide-react";
 
 // ---------- Utils ----------
 function gameScoreToNum(s) {
@@ -42,6 +41,8 @@ export default function WatchPage() {
   const lastUpdateRef = useRef(0);
   const historyRef = useRef([]);
   const undoLockRef = useRef(false);
+
+  const lastCreatedPointIdRef = useRef(null);
 
   const [isReady, setIsReady] = useState(false);
 
@@ -205,6 +206,20 @@ export default function WatchPage() {
     sendingRef.current = true;
 
     const item = queueRef.current.shift();
+
+    const res = await fetch("/api/points", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-pairing-token": pairingToken,
+      },
+      body: JSON.stringify(item),
+    });
+
+    const data = await res.json();
+    if (data?._id) {
+      lastCreatedPointIdRef.current = data._id;
+    }
 
     try {
       await fetch("/api/points", {
@@ -393,6 +408,47 @@ export default function WatchPage() {
     }
   };
 
+  // ---------------- TOUCH SWIPE -----------------
+  const touchStartRef = useRef({ x: 0, y: 0 });
+
+  function handleTouchStart(e) {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+
+  async function handleTouchEnd(e) {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartRef.current.x;
+    const dy = t.clientY - touchStartRef.current.y;
+
+    if (Math.abs(dx) < 40 && Math.abs(dy) < 40) return;
+
+    let tag = null;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      tag = dx > 0 ? "forehand_winner" : "backhand_winner";
+    } else {
+      tag = dy < 0 ? "serve_winner" : "return_winner";
+    }
+
+    if (!tag || !lastCreatedPointIdRef.current) return;
+
+    try {
+      await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pairing-token": pairingToken,
+        },
+        body: JSON.stringify({
+          extra_tag: tag,
+        }),
+      });
+    } catch (e) {
+      console.error("Gesture tag failed", e);
+    }
+  }
+
   // ---------- DERIVED ----------
   const score = match?.score || {};
   const setsP = score.sets_player || [];
@@ -419,6 +475,8 @@ export default function WatchPage() {
 
   return (
     <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{
         background: "#000",
         color: "#fff",

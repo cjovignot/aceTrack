@@ -32,6 +32,22 @@ const schema = new mongoose.Schema(
     score_at_point: String,
     timestamp: String,
     is_deleted: { type: Boolean, default: false }, // 🔥 FIX
+
+    extra_tag: {
+      type: String,
+      enum: [
+        "serve_winner",
+        "return_winner",
+        "forehand_winner",
+        "backhand_winner",
+      ],
+      default: null,
+    },
+
+    tagged_at: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

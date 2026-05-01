@@ -68,7 +68,7 @@ export async function DELETE(request, { params }) {
   });
 }
 
-// ---------- PATCH (SOFT DELETE) ----------
+// ---------- AUTHORIZING ----------
 async function isAuthorizedForMatch(request, matchId) {
   const token = request.headers.get("x-pairing-token");
 
@@ -106,6 +106,12 @@ export async function PATCH(request, { params }) {
 
   const pointId = params.id;
 
+  if (!pointId) {
+    return NextResponse.json({ error: "Missing point id" }, { status: 400 });
+  }
+
+  const body = await request.json();
+
   const point = await PointLog.findById(pointId);
 
   if (!point) {
@@ -118,9 +124,41 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await PointLog.findByIdAndUpdate(pointId, {
-    is_deleted: true,
+  // 🧠 UPDATE dynamique
+  const update = {};
+
+  // ---- SOFT DELETE ----
+  if (typeof body.is_deleted === "boolean") {
+    update.is_deleted = body.is_deleted;
+  }
+
+  // ---- EXTRA TAG ----
+  if (body.extra_tag) {
+    const allowedTags = [
+      "serve_winner",
+      "return_winner",
+      "forehand_winner",
+      "backhand_winner",
+    ];
+
+    if (!allowedTags.includes(body.extra_tag)) {
+      return NextResponse.json({ error: "Invalid extra_tag" }, { status: 400 });
+    }
+
+    update.extra_tag = body.extra_tag;
+  }
+
+  // ---- RIEN À UPDATE ----
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
+  const updated = await PointLog.findByIdAndUpdate(pointId, update, {
+    new: true,
   });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    point: updated,
+  });
 }
