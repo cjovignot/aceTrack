@@ -27,10 +27,13 @@
 }
 
 @keyframes flashFade {
-  from {
-    opacity: 1;
+  0% {
+    opacity: 0;
   }
-  to {
+  20% {
+    opacity: 0.5;
+  }
+  100% {
     opacity: 0;
   }
 }

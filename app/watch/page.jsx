@@ -564,11 +564,11 @@ export default function WatchPage() {
             inset: 0,
             background:
               flash === "ok"
-                ? "rgba(34,197,94,0.35)" // vert
-                : "rgba(239,68,68,0.35)", // rouge
+                ? "rgba(34,197,94,1)" // couleur pleine
+                : "rgba(239,68,68,1)",
             pointerEvents: "none",
             zIndex: 999,
-            animation: "flashFade 0.25s cubic-bezier(.4,0,.2,1)",
+            animation: "flashFade 0.4s ease-out",
           }}
         />
       )}
