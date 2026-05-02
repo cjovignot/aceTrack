@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import ScoreBoard from "@/components/ScoreBoard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatName, formatISODate } from "@/lib/format";
 
 export default function PublicLiveScore() {
   const [search, setSearch] = useState("");
@@ -125,39 +126,6 @@ export default function PublicLiveScore() {
     setMatch(await res.json());
   }
 
-  function formatName(fullName) {
-    if (!fullName) return "";
-
-    const parts = fullName.trim().split(" ");
-
-    if (parts.length === 1) return parts[0];
-
-    const firstName = parts[0];
-    const lastName = parts.slice(1).join(" ");
-
-    return `${firstName.charAt(0).toUpperCase()}. ${lastName.toUpperCase()}`;
-  }
-
-  const formatDate = (iso) => {
-    const date = new Date(iso);
-
-    const day = new Intl.DateTimeFormat("fr-FR", { weekday: "short" }).format(
-      date,
-    );
-    const dayNum = date.getDate();
-    const month = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(
-      date,
-    );
-    const year = date.getFullYear();
-
-    const time = new Intl.DateTimeFormat("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-
-    return `${day} ${dayNum} ${month} ${year} - ${time}`;
-  };
-
   async function loadPoints(token) {
     const res = await fetch(`/api/public/match-points?token=${token}`);
     if (!res.ok) return;
@@ -239,7 +207,7 @@ export default function PublicLiveScore() {
               className="text-left transition duration-100 border-gray-800 shadow-lg group rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 hover:border-cyan-400 hover:shadow-cyan-500/10"
             >
               <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-white transition-colors duration-300 rounded-t-2xl bg-gradient-to-br from-gray-900/80 to-gray-800/60 backdrop-blur-sm group-hover:text-cyan-300">
-                <span className="z-10">{formatDate(m.createdAt)}</span>
+                <span className="z-10">{formatISODate(m.createdAt)}</span>
                 {/* STATUS */}
                 <span
                   className={`text-xs px-2 py-[0.5] rounded-full font-medium ${

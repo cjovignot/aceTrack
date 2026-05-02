@@ -116,7 +116,7 @@ export default function NewMatchPage() {
       match_date_start: null,
     });
 
-    router.push("/live-score");
+    router.push("/watch-connect");
   }
 
   const playerLabel =

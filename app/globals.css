@@ -26,6 +26,15 @@
   }
 }
 
+@keyframes flashFade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .animate-blink {
   animation: blink 1s infinite;
 }

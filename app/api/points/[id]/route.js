@@ -103,8 +103,8 @@ async function isAuthorizedForMatch(request, matchId) {
 // ---------- PATCH (SOFT DELETE) ----------
 export async function PATCH(request, { params }) {
   await connectDB();
-
-  const pointId = params.id;
+  const { id } = await params;
+  const pointId = id;
 
   if (!pointId) {
     return NextResponse.json({ error: "Missing point id" }, { status: 400 });

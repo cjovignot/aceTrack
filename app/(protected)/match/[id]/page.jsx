@@ -146,6 +146,40 @@ export default function MatchDetailPage() {
       ? Number((opponent.winners / opponent.unforcedErrors).toFixed(2))
       : opponent.winners;
 
+  // ---- ERROR RATE PAR COUP
+
+  const playerForehandShots = player.forehandWinners + player.forehandErrors;
+
+  const playerBackhandShots = player.backhandWinners + player.backhandErrors;
+
+  const opponentForehandShots =
+    opponent.forehandWinners + opponent.forehandErrors;
+
+  const opponentBackhandShots =
+    opponent.backhandWinners + opponent.backhandErrors;
+
+  // %
+
+  const playerForehandErrorRate =
+    playerForehandShots > 0
+      ? (player.forehandErrors / playerForehandShots) * 100
+      : 0;
+
+  const playerBackhandErrorRate =
+    playerBackhandShots > 0
+      ? (player.backhandErrors / playerBackhandShots) * 100
+      : 0;
+
+  const opponentForehandErrorRate =
+    opponentForehandShots > 0
+      ? (opponent.forehandErrors / opponentForehandShots) * 100
+      : 0;
+
+  const opponentBackhandErrorRate =
+    opponentBackhandShots > 0
+      ? (opponent.backhandErrors / opponentBackhandShots) * 100
+      : 0;
+
   // ---------------- UI ----------------
   return (
     <div className="max-w-lg px-4 py-6 mx-auto mb-20">
@@ -267,9 +301,42 @@ export default function MatchDetailPage() {
           opponentValue={opponent.forehandWinners}
         />
         <StatBar
+          label="Erreurs coup droit (%)"
+          playerValue={playerForehandErrorRate.toFixed(0)}
+          opponentValue={opponentForehandErrorRate.toFixed(0)}
+          isPercent
+        />
+
+        <StatBar
           label="Winners revers"
           playerValue={player.backhandWinners}
           opponentValue={opponent.backhandWinners}
+        />
+        <StatBar
+          label="Erreurs revers (%)"
+          playerValue={playerBackhandErrorRate.toFixed(0)}
+          opponentValue={opponentBackhandErrorRate.toFixed(0)}
+          isPercent
+        />
+
+        <StatBar
+          label="Efficacité coup droit (%)"
+          playerValue={
+            playerForehandShots > 0
+              ? ((player.forehandWinners / playerForehandShots) * 100).toFixed(
+                  0,
+                )
+              : 0
+          }
+          opponentValue={
+            opponentForehandShots > 0
+              ? (
+                  (opponent.forehandWinners / opponentForehandShots) *
+                  100
+                ).toFixed(0)
+              : 0
+          }
+          isPercent
         />
 
         <StatBar

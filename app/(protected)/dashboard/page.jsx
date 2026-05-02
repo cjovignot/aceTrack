@@ -3,9 +3,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/AuthContext";
 import api from "../../../lib/api";
-import { Plus, Trophy, TrendingUp, Flame } from "lucide-react";
+import { Plus, Trophy, TrendingUp, Flame, ChevronRight } from "lucide-react";
 import { computeStats } from "../../../lib/stats";
 import { motion, AnimatePresence } from "framer-motion";
+import StatsPieChart from "@/components/Stats/PieChart";
+import { formatISODate, formatName } from "@/lib/format";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -100,10 +102,13 @@ export default function DashboardPage() {
 
   const totalErrors = player.unforcedErrors + player.forcedErrors;
 
+  const totalShots =
+    player.winners + player.unforcedErrors + player.forcedErrors;
+
   const ratioWF =
-    ((player.winners / (player.winners + player.unforcedErrors)) * 100).toFixed(
-      1,
-    ) + "%";
+    totalShots > 0
+      ? ((player.winners / totalShots) * 100).toFixed(1) + "%"
+      : "0%";
 
   const acesPerMatch = (player.aces / totalMatches).toFixed(1);
   const dfPerMatch = (player.doubleFaults / totalMatches).toFixed(1);
@@ -166,10 +171,21 @@ export default function DashboardPage() {
 
   const backhandShots = player.backhandWinners + player.backhandErrors;
 
-  const forehandErrorRate =
-    forehandShots > 0 ? (player.forehandErrors / forehandShots) * 100 : 0;
-  const backhandErrorRate =
-    backhandShots > 0 ? (player.backhandErrors / backhandShots) * 100 : 0;
+  const forehandSuccessRate =
+    forehandShots + player.forehandErrors > 0
+      ? (
+          (forehandShots / (forehandShots + player.forehandErrors)) *
+          100
+        ).toFixed(1)
+      : 0;
+
+  const backhandSuccessRate =
+    backhandShots + player.backhandErrors > 0
+      ? (
+          (backhandShots / (backhandShots + player.backhandErrors)) *
+          100
+        ).toFixed(1)
+      : 0;
 
   const maxGraph = Math.max(...graphData.map((d) => d.value), 1);
 
@@ -182,13 +198,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-3 mb-6">
         <Stat icon={<Trophy />} value={wins} label="Victoires" />
         <Stat icon={<TrendingUp />} value={winRate + "%"} label="Win rate" />
-        <Stat icon={<Flame />} value={currentStreak} label="Streak 🔥" />
+        <Stat icon={<Flame />} value={currentStreak} label="Série 🔥" />
       </div>
 
       {/* INTERACTIVE STATS */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <Stat
-          label="Ratio"
+          label="Points réussis"
           value={ratioWF}
           active={selectedStat === "ratio"}
           onClick={() => setSelectedStat("ratio")}
@@ -227,8 +243,10 @@ export default function DashboardPage() {
           >
             {selectedStat === "ratio" && (
               <>
-                <p className="mb-3 font-semibold">🎯 Ratio W/F</p>
-                <MiniBarChart data={graphData} max={maxGraph} />
+                <StatsPieChart
+                  label="🎯 Répartition W/F"
+                  graphData={graphData}
+                />{" "}
               </>
             )}
 
@@ -294,19 +312,21 @@ export default function DashboardPage() {
                       value={player.unforcedErrors}
                     />
                     <MiniBar
-                      label="% Fautes Coups droit"
-                      value={forehandErrorRate}
+                      label="Réussite Coup droit"
+                      value={forehandSuccessRate}
+                      suffix=" %"
                     />
                     <MiniBar
-                      label="% Fautes Revers"
-                      value={backhandErrorRate}
+                      label="Réussite Revers"
+                      value={backhandSuccessRate}
+                      suffix=" %"
                     />
                   </div>
 
                   {/* PRESSION */}
                   <div className="p-3 rounded-xl bg-gray-800/50">
                     <p className="mb-2 text-xs font-semibold tracking-wide text-cyan-300/70">
-                      🔥 Pression
+                      🔥 Pression subie
                     </p>
                     <MiniBar
                       label="Fautes provoquées"
@@ -456,24 +476,87 @@ function MiniBarChart({ data, max }) {
 
 function MatchItem({ match: m }) {
   return (
-    <Link
-      href={"/match/" + m._id}
-      className="flex items-center justify-between p-4 mb-2 rounded-2xl bg-gray-900/40 hover:bg-gray-900/70"
-    >
-      <div>
-        <p className="text-sm text-cyan-300">
-          {m.player_name} vs {m.opponent_name}
-        </p>
-        <p className="text-xs text-gray-400">{m.surface}</p>
-      </div>
+    <Link href={"/match/" + m._id} className="">
+      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-white transition-colors duration-300 rounded-t-2xl bg-gradient-to-br from-gray-900/80 to-gray-800/60 backdrop-blur-sm group-hover:text-cyan-300">
+        <span className="z-10">{formatISODate(m.createdAt)}</span>
+        {/* STATUS */}
+        <span
+          className={`text-xs px-2 py-[0.5] rounded-full font-medium ${
+            m.status === "En cours"
+              ? "bg-green-500/20 text-green-400 animate-pulse"
+              : "bg-gray-700 text-gray-300"
+          }`}
+        >
+          {m.status}
+        </span>
 
-      <div className="flex items-center gap-2">
-        {m.winner === "player" && (
-          <Trophy className="w-5 h-5 text-yellow-500" />
-        )}
-        {m.status === "En cours" && (
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-        )}
+        {/* underline animée */}
+        <span
+          className="
+      absolute left-0 bottom-0 h-[0.8px] w-full
+      bg-cyan-400
+      origin-left
+      scale-x-0
+      transition-transform duration-300 ease-out
+      group-hover:scale-x-100
+    "
+        />
+      </div>
+      <div className="flex justify-between p-3">
+        <div className="flex flex-col justify-between">
+          {/* PLAYERS */}
+          <div className="grid grid-cols-2 gap-3">
+            <h2 className="font-semibold leading-tight text-md">
+              {formatName(m.player_name)}
+            </h2>
+          </div>
+          <h1 className="font-semibold leading-tight text-md">
+            {formatName(m.opponent_name)}
+          </h1>
+        </div>
+
+        {/* SCORE */}
+        <div className="flex justify-end gap-8">
+          <div className="flex flex-col justify-between">
+            <div className="grid grid-cols-3 gap-3">
+              {m.score.sets_player.map((s, i) => {
+                const opponentScore = m.score.sets_opponent[i];
+                const isHigher = s > opponentScore;
+
+                return (
+                  <span
+                    key={i}
+                    className={isHigher ? "text-yellow-400 font-bold" : ""}
+                  >
+                    {s}
+                  </span>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {m.score.sets_opponent.map((s, i) => {
+                const playerScore = m.score.sets_player[i];
+                const isHigher = s > playerScore;
+
+                return (
+                  <span
+                    key={i}
+                    className={isHigher ? "text-yellow-400 font-bold" : ""}
+                  >
+                    {s}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <div className="text-xs text-cyan-400">
+              <ChevronRight />
+            </div>
+          </div>
+        </div>
       </div>
     </Link>
   );

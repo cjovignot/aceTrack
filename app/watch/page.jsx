@@ -64,9 +64,17 @@ export default function WatchPage() {
   const queueRef = useRef([]);
   const sendingRef = useRef(false);
 
+  const [flash, setFlash] = useState(null); // "ok" | "error" | null
+
+  // ---------- FLASH RESPONSE -----------
+  function triggerFlash(type) {
+    setFlash(type);
+    setTimeout(() => setFlash(null), 250); // durée du flash
+  }
+
   // ---------- SIMULATE SWIPES WITH KEYBOARD ARROWS ----------
   useEffect(() => {
-    function handleKey(e) {
+    async function handleKey(e) {
       if (!lastCreatedPointIdRef.current) return;
 
       let tag = null;
@@ -91,18 +99,27 @@ export default function WatchPage() {
       if (!tag || !lastCreatedPointIdRef.current) return;
 
       try {
-        fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-pairing-token": pairingToken,
+        const res = await fetch(
+          `/api/points/${lastCreatedPointIdRef.current}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "x-pairing-token": pairingToken,
+            },
+            body: JSON.stringify({
+              extra_tag: tag,
+            }),
           },
-          body: JSON.stringify({
-            extra_tag: tag,
-          }),
-        });
+        );
+
+        if (res.ok) {
+          triggerFlash("ok");
+        } else {
+          triggerFlash("error");
+        }
       } catch (e) {
-        console.error("Gesture tag failed", e);
+        triggerFlash("error");
       }
     }
 
@@ -387,7 +404,7 @@ export default function WatchPage() {
         if (!lastPoint) return;
 
         await fetch(`/api/points/${lastPoint._id}`, {
-          method: "PATCH",
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
             "x-pairing-token": pairingToken,
@@ -472,7 +489,7 @@ export default function WatchPage() {
     if (!tag || !lastCreatedPointIdRef.current) return;
 
     try {
-      await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
+      const res = await fetch(`/api/points/${lastCreatedPointIdRef.current}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -482,8 +499,14 @@ export default function WatchPage() {
           extra_tag: tag,
         }),
       });
+
+      if (res.ok) {
+        triggerFlash("ok");
+      } else {
+        triggerFlash("error");
+      }
     } catch (e) {
-      console.error("Gesture tag failed", e);
+      triggerFlash("error");
     }
   }
 
@@ -533,6 +556,23 @@ export default function WatchPage() {
         overflow: "hidden",
       }}
     >
+      {/* FLASH RESPONSE API */}
+      {flash && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              flash === "ok"
+                ? "rgba(34,197,94,0.35)" // vert
+                : "rgba(239,68,68,0.35)", // rouge
+            pointerEvents: "none",
+            zIndex: 999,
+            animation: "flashFade 0.25s cubic-bezier(.4,0,.2,1)",
+          }}
+        />
+      )}
+
       {/* QR CONNECT */}
       {!isReady && pairingToken && (
         <div
