@@ -609,7 +609,7 @@ export default function WatchPage() {
       {/* ===== TON UI ORIGINAL INCHANGÉ ===== */}
       {isReady && (
         <>
-          {startDate === null && (
+          {!match?.match_date_start && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
               <button
                 onClick={handleStartMatch}
