@@ -615,7 +615,7 @@ export default function WatchPage() {
                 onClick={handleStartMatch}
                 className="relative px-10 py-6 transition-all duration-300 shadow-2xl rounded-3xl bg-gradient-to-br from-yellow-400 to-orange-500 hover:scale-105 hover:shadow-yellow-500/40 active:scale-95"
               >
-                <span className="relative z-10 text-sm font-semibold text-black">
+                <span className="relative z-10 font-semibold text-black text-md">
                   Démarrer le match
                 </span>
 
