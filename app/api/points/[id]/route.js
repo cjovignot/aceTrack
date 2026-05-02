@@ -42,7 +42,7 @@ async function isAuthorized(request, matchId) {
 export async function DELETE(request, { params }) {
   await connectDB();
 
-  const pointId = params.id;
+const { id: pointId } = params;
 
   if (!pointId) {
     return NextResponse.json({ error: "Point id required" }, { status: 400 });
