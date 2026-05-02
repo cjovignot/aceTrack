@@ -42,7 +42,8 @@ async function isAuthorized(request, matchId) {
 export async function DELETE(request, { params }) {
   await connectDB();
 
-const { id: pointId } = params;
+  const { id } = await params;
+  const pointId = id;
 
   if (!pointId) {
     return NextResponse.json({ error: "Point id required" }, { status: 400 });
@@ -54,7 +55,7 @@ const { id: pointId } = params;
     return NextResponse.json({ error: "Point not found" }, { status: 404 });
   }
 
-  const authorized = await isAuthorized(request, point.match_id);
+  const authorized = await isAuthorizedForMatch(request, point.match_id);
 
   if (!authorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -107,7 +108,7 @@ export async function PATCH(request, { params }) {
   const pointId = id;
 
   if (!pointId) {
-    return NextResponse.json({ error: "Missing point id" }, { status: 400 });
+    return NextResponse.json({ error: "Point id required" }, { status: 400 });
   }
 
   const body = await request.json();
