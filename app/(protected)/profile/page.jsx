@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
+import Link from "next/link";
 import api from "../../../lib/api";
 import { Save, LogOut, Loader2 } from "lucide-react";
 
@@ -111,6 +112,8 @@ export default function ProfilePage() {
           </select>
         </div>
       </div>
+
+      <Link href={"/import-data"}>Importer un match</Link>
       <button
         onClick={handleSave}
         disabled={saving}
