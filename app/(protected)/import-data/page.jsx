@@ -339,7 +339,7 @@ export default function ImportDataPage() {
                 </thead>
 
                 <tbody>
-                  {previewData.slice(0, 50).map((row, i) => (
+                  {previewData.map((row, i) => (
                     <tr key={i} className="border-b border-gray-800">
                       {Object.values(row).map((value, j) => (
                         <td key={j} className="px-3 py-2">
