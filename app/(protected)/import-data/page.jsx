@@ -5,6 +5,7 @@ import { Upload, FileText, X } from "lucide-react";
 import { csvToJSON } from "@/lib/csvToJSON";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { createInitialScore } from "@/lib/tennisScoring"
 
 export default function ImportDataPage() {
   const { user } = useAuth();
