@@ -79,7 +79,7 @@ export default function DashboardPage() {
       {/* ---------------- TOP STATS ---------------- */}
       <section className="grid grid-cols-3 gap-3 mb-6">
         <Stat icon={<Trophy />} value={wins} label="Victoires" />
-        <Stat icon={<TrendingUp />} value={winRate.toFixed(1) + "%"} label="Win rate" />
+        <Stat icon={<TrendingUp />} value={winRate + "%"} label="Win rate" />
         <Stat icon={<Flame />} value={currentStreak} label="Série 🔥" />
       </section>
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <MiniBar
                   label="Points gagnés au service"
-                  value={player.serviceRatio || 0}
+                  value={player.serviceRatio.toFixed(1) || 0}
                   suffix="%"
                 />
                 <MiniBar label="Aces / match" value={player.aces} />
