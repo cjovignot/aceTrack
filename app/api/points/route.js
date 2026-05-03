@@ -72,7 +72,6 @@ export async function GET(request) {
 }
 
 // ---------- CREATE POINT ----------
-// ---------- CREATE POINT ----------
 export async function POST(request) {
   await connectDB();
 
@@ -95,7 +94,7 @@ export async function POST(request) {
   if (!match) {
     return NextResponse.json(
       { error: "Unauthorized or match not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -103,7 +102,7 @@ export async function POST(request) {
   if (match.status === "Terminé") {
     return NextResponse.json(
       { error: "Match already finished" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

@@ -45,12 +45,21 @@ export default function DashboardPage() {
   // ---------------- LOGIQUE INTACTE ----------------
   const wins = matches.filter((m) => m.winner === "player").length;
   const winRate =
-    matches.length > 0 ? Math.round((wins / matches.length) * 100).toFixed(1) : 0;
+    matches.length > 0
+      ? Math.round((wins / matches.length) * 100).toFixed(1)
+      : 0;
 
   const finishedMatches = matches.filter((m) => m.status === "Terminé");
 
   let currentStreak = 0;
-  const sortedMatches = [...finishedMatches].reverse();
+
+  const sortedMatches = [...matches].sort((a, b) => {
+    const dateA = new Date(a.match_date_start || a.created_at);
+    const dateB = new Date(b.match_date_start || b.created_at);
+
+    return dateB - dateA; // 🔥 du plus récent au plus ancien
+  });
+
   for (const m of sortedMatches) {
     if (m.winner === "player") currentStreak++;
     else break;
@@ -58,8 +67,6 @@ export default function DashboardPage() {
 
   const stats = computeStats(points);
   const player = stats.player;
-
-  console.log(stats.player);
 
   // ---------------- UI HELPERS ----------------
   const card =
@@ -187,11 +194,11 @@ export default function DashboardPage() {
 
         {loading ? (
           <p className="py-8 text-center text-gray-500">Chargement...</p>
-        ) : matches.length === 0 ? (
+        ) : sortedMatches.length === 0 ? (
           <div className="py-12 text-center text-gray-500">🎾 Aucun match</div>
         ) : (
           <div className="space-y-3">
-            {matches.map((m) => (
+            {sortedMatches.map((m) => (
               <MatchItem key={m._id} match={m} />
             ))}
           </div>
@@ -240,9 +247,11 @@ function MiniBar({ label, value, suffix = "" }) {
 function MatchItem({ match: m }) {
   return (
     <Link href={"/match/" + m._id}>
-      <div className="p-4 transition border rounded-2xl border-cyan-300/10 bg-gray-950 hover:border-cyan-300/40">
+      <div className="p-4 my-3 transition border rounded-2xl border-cyan-300/10 bg-gray-950 hover:border-cyan-300/40">
         <div className="flex items-center justify-between mb-2 text-xs text-gray-400">
-          <span className="text-white">{formatISODate(m.createdAt)}</span>
+          <span className="text-white">
+            {formatISODate(m.match_date_start || m.created_at)}
+          </span>
 
           <span
             className={

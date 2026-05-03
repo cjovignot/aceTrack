@@ -5,7 +5,7 @@ import { Upload, FileText, X } from "lucide-react";
 import { csvToJSON } from "@/lib/csvToJSON";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { createInitialScore } from "@/lib/tennisScoring";
+import { addPoint, createInitialScore } from "@/lib/tennisScoring";
 
 export default function ImportDataPage() {
   const { user } = useAuth();
@@ -44,6 +44,7 @@ export default function ImportDataPage() {
     super_tiebreak: false,
     super_tiebreak_points: 10,
     serving_first: "player",
+    match_date_start: "",
   });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -79,29 +80,19 @@ export default function ImportDataPage() {
 
       setPreviewData(data);
 
+      // 👇 Déduction du serveur sur le 1er point
 
-// 👇 Déduction du serveur sur le 1er point
+      if (data.length > 0) {
+        const firstPoint = data[0];
 
-if (data.length > 0) {
+        const servingFirst = firstPoint.isServing ? "player" : "opponent";
 
-  const firstPoint = data[0];
+        setForm((f) => ({
+          ...f,
 
-  const servingFirst = firstPoint.isServing
-
-    ? "player"
-
-    : "opponent";
-
-  setForm((f) => ({
-
-    ...f,
-
-    serving_first: servingFirst,
-
-  }));
-
-}
-
+          serving_first: servingFirst,
+        }));
+      }
     } catch (e) {
       console.error(e);
     }
@@ -116,6 +107,7 @@ if (data.length > 0) {
     setLoading(true);
 
     try {
+      // ---------------- MATCH ----------------
       const playerName =
         [form.player_first_name, form.player_last_name]
           .filter(Boolean)
@@ -136,11 +128,6 @@ if (data.length > 0) {
         super_tiebreak_points: form.super_tiebreak_points,
       };
 
-      const score = createInitialScore
-        ? createInitialScore(form.serving_first, rules)
-        : null;
-
-      // CREATE MATCH
       const matchRes = await api.post("/api/matches", {
         player_first_name: form.player_first_name,
         player_last_name: form.player_last_name,
@@ -162,29 +149,51 @@ if (data.length > 0) {
         super_tiebreak_points: form.super_tiebreak_points,
 
         serving_first: form.serving_first,
-
-        status: "En cours",
-
-        score,
+        status: "Terminé",
         date: new Date().toISOString(),
-        match_date_start: null,
+        match_date_start: form.match_date_start
+          ? new Date(form.match_date_start).toISOString()
+          : null,
+        match_date_end: form.match_date_start
+          ? new Date(form.match_date_start).toISOString()
+          : null,
       });
 
       const matchId = matchRes.data._id;
 
-      const enriched = previewData.map((row) => ({
-        ...row,
-        match_id: matchId,
-      }));
+      // ---------------- REPLAY ENGINE ----------------
+      let score = createInitialScore(form.serving_first, rules);
 
-      await api.post("/api/pointlogs/bulk", {
+      const enriched = [];
+
+      for (let i = 0; i < previewData.length; i++) {
+        const row = previewData[i];
+
+        const winner = row.point_winner; // IMPORTANT CSV doit avoir ça
+
+        const result = addPoint(score, winner);
+
+        score = result.score;
+
+        enriched.push({
+          match_id: matchId,
+          point_index: i,
+          point_winner: winner,
+          isServing: row.isServing,
+          shot_type: row.shot_type || null,
+          shot_direction: row.shot_direction || null,
+          score_at_point: JSON.stringify(score), // 🔥 snapshot utile
+          timestamp: row.timestamp || new Date().toISOString(),
+        });
+      }
+
+      // ---------------- BULK INSERT POINTS ----------------
+      await api.post("/api/points/bulk", {
         match_id: matchId,
-        logs: enriched,
+        points: enriched,
+        final_score: score,
       });
 
-      console.log("IMPORT CONFIRMED");
-
-      // reset
       setPreviewData([]);
       setFile(null);
     } catch (e) {
@@ -245,6 +254,16 @@ if (data.length > 0) {
           <h2 className="text-xs font-semibold tracking-wider text-gray-300 uppercase">
             Paramètres du match
           </h2>
+          <div>
+            <p className="mb-2 text-xs text-gray-500">Date du match</p>
+
+            <input
+              type="date"
+              className={`${inp} text-white [color-scheme:dark]`}
+              value={form.match_date_start}
+              onChange={(e) => set("match_date_start", e.target.value)}
+            />
+          </div>
 
           <div>
             <p className="mb-2 text-xs text-gray-500">Surface</p>
@@ -305,7 +324,10 @@ if (data.length > 0) {
               id="fileInput"
             />
 
-            <label htmlFor="fileInput" className="px-4 py-2 mt-4 border rounded-xl">
+            <label
+              htmlFor="fileInput"
+              className="px-4 py-2 mt-4 border rounded-xl"
+            >
               Choisir un fichier
             </label>
           </div>
@@ -341,7 +363,7 @@ if (data.length > 0) {
           <button
             onClick={handleConfirmImport}
             disabled={!previewData.length || loading}
-            className="w-full h-12 mt-3 font-semibold text-black rounded-xl bg-green-400"
+            className="w-full h-12 mt-3 font-semibold text-black bg-green-400 rounded-xl"
           >
             {loading ? "Envoi..." : "Valider l’import"}
           </button>
@@ -353,7 +375,10 @@ if (data.length > 0) {
                 <thead className="bg-gray-900 text-gray-400 uppercase text-[10px]">
                   <tr>
                     {Object.keys(previewData[0]).map((key) => (
-                      <th key={key} className="px-3 py-2 border-b border-gray-800">
+                      <th
+                        key={key}
+                        className="px-3 py-2 border-b border-gray-800"
+                      >
                         {key}
                       </th>
                     ))}
