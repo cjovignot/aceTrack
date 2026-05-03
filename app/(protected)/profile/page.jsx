@@ -113,7 +113,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Link href={"/import-data"}>Importer un match</Link>
+      <Link
+        className="flex items-center justify-center w-full h-12 gap-2 mb-3 font-semibold text-white transition border border-cyan-300/30 bg-cyan-300/70 disabled:opacity-50 hover:bg-gray-950 hover:text-cyan-300/70 rounded-xl"
+        href={"/import-data"}
+      >
+        Importer un match
+      </Link>
       <button
         onClick={handleSave}
         disabled={saving}
@@ -128,7 +133,7 @@ export default function ProfilePage() {
       </button>
       <button
         onClick={logout}
-        className="flex items-center justify-center w-full h-12 gap-2 font-semibold text-gray-600 transition border border-gray-200 rounded-xl hover:bg-gray-50"
+        className="flex items-center justify-center w-full h-12 gap-2 font-semibold transition border text-cyan-300 border-cyan-300/70 rounded-xl hover:bg-red-900 hover:border-none hover:text-gray-300"
       >
         <LogOut className="w-4 h-4" /> Se déconnecter
       </button>
