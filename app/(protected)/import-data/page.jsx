@@ -11,6 +11,7 @@ export default function ImportDataPage() {
   const { user } = useAuth();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [previewData, setPreviewData] = useState([]);
 
   const surfaces = ["Terre-battue", "Quick", "Green Set", "Terbal"];
   const pill = (active) =>
@@ -128,6 +129,8 @@ export default function ImportDataPage() {
       // ---------------- CSV PARSE (UNCHANGED) ----------------
       const text = await file.text();
       const data = csvToJSON(text);
+      
+      setPreviewData(data);
 
       console.log("IMPORT RESULT:", data);
 
@@ -312,6 +315,34 @@ export default function ImportDataPage() {
           >
             {loading ? "Import..." : "Importer"}
           </button>
+          
+          {previewData.length > 0 && (
+  <div className="mt-6 overflow-auto border rounded-xl border-cyan-300/20">
+    <table className="min-w-full text-xs text-left text-gray-300">
+      <thead className="bg-gray-900 text-gray-400 uppercase text-[10px]">
+        <tr>
+          {Object.keys(previewData[0]).map((key) => (
+            <th key={key} className="px-3 py-2 border-b border-gray-800">
+              {key}
+            </th>
+          ))}
+        </tr>
+      </thead>
+
+      <tbody>
+        {previewData.map((row, i) => (
+          <tr key={i} className="border-b border-gray-800">
+            {Object.values(row).map((value, j) => (
+              <td key={j} className="px-3 py-2">
+{typeof value === "boolean" ? (value ? "✅" : "❌") : String(value)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
         </section>
       </div>
     </div>
