@@ -45,7 +45,7 @@ export default function DashboardPage() {
   // ---------------- LOGIQUE INTACTE ----------------
   const wins = matches.filter((m) => m.winner === "player").length;
   const winRate =
-    matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0;
+    matches.length > 0 ? Math.round((wins / matches.length) * 100).toFixed(1) : 0;
 
   const finishedMatches = matches.filter((m) => m.status === "Terminé");
 
