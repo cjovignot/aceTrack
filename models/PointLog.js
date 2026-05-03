@@ -10,6 +10,7 @@ const schema = new mongoose.Schema(
 
     set_number: Number,
     game_number: Number,
+    isServing: Boolean,
 
     point_winner: {
       type: String,

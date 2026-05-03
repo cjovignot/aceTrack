@@ -334,6 +334,7 @@ export default function WatchPage() {
       pairingToken,
       match_id: match._id,
       point_winner: winner,
+      isServing: match.score.serving === "player" ? true : false,
       shot_type: normalizedType,
       isWinner: normalizedType === "winner" || normalizedType === "ace",
       timestamp: new Date(),

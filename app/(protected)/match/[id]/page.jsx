@@ -15,6 +15,8 @@ export default function MatchDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const card = "bg-white/5 border border-white/10 rounded-2xl p-4";
+
   // ---------------- UTILS ----------------
   function normalizeShotType(type) {
     if (!type) return "";
@@ -105,8 +107,20 @@ export default function MatchDetailPage() {
   const opponentTotalErrors = opponent.unforcedErrors + opponent.forcedErrors;
 
   // ---- offensif
-  const playerOffensive = player.winners + player.forcedErrors;
-  const opponentOffensive = opponent.winners + opponent.forcedErrors;
+  const playerOffensive = player.winners + opponent.forcedErrors;
+  const opponentOffensive = opponent.winners + player.forcedErrors;
+  const playerOffensiveRatio =
+    (player.winners + opponent.forcedErrors) /
+    (player.winners / (player.winners + opponent.winners) || 1);
+  const opponentOffensiveRatio =
+    (opponent.winners + player.forcedErrors) /
+    (opponent.winners / (opponent.winners + player.winners) || 1);
+
+  console.log(
+    player.winners,
+    opponent.forcedErrors,
+    player.winners + opponent.winners,
+  );
 
   // ---- service %
   let playerServePoints = 0;
@@ -136,12 +150,12 @@ export default function MatchDetailPage() {
       : 0;
 
   // ---- ratio winners / fautes
-  const playerRatio =
+  const playerRatioWF =
     player.unforcedErrors > 0
       ? Number((player.winners / player.unforcedErrors).toFixed(2))
       : player.winners;
 
-  const opponentRatio =
+  const opponentRatioWF =
     opponent.unforcedErrors > 0
       ? Number((opponent.winners / opponent.unforcedErrors).toFixed(2))
       : opponent.winners;
@@ -180,28 +194,42 @@ export default function MatchDetailPage() {
       ? (opponent.backhandErrors / opponentBackhandShots) * 100
       : 0;
 
+  // FAUTES COUPS DROIT
+  const playerForehandTotal =
+    stats.player.forehandErrors + stats.player.forehandWinners;
+  const opponentForehandTotal =
+    stats.opponent.forehandErrors + stats.opponent.forehandWinners;
+
+  // FAUTES REVERS
+  const playerBackhandTotal =
+    stats.player.backhandErrors + stats.player.backhandWinners;
+  const opponentBackhandTotal =
+    stats.opponent.backhandErrors + stats.opponent.backhandWinners;
+
   // ---------------- UI ----------------
   return (
     <div className="max-w-lg px-4 py-6 mx-auto mb-20">
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-start mb-6">
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600"
+          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white"
         >
           <ArrowLeft className="w-4 h-4" /> Retour
         </button>
 
-        <button onClick={reloadComponent}>
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex items-center justify-end w-full gap-3">
+          <button onClick={reloadComponent}>
+            <RefreshCw className="w-4 h-4 text-gray-400 hover:text-white" />
+          </button>
 
-        <button
-          onClick={() => setShowConfirm(true)}
-          className="p-2 text-gray-400 transition rounded-lg hover:bg-red-50 hover:text-red-500"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <button
+            onClick={() => setShowConfirm(true)}
+            className="p-2 text-gray-400 transition rounded-lg hover:bg-red-500/10 hover:text-red-500"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* CONFIRM DELETE */}
@@ -233,139 +261,221 @@ export default function MatchDetailPage() {
       {/* RESULT */}
       {match.status === "Terminé" && (
         <div className="mb-6 text-center">
-          {match.winner === "player" ? (
-            <>
-              <Trophy className="w-6 h-6 mx-auto text-yellow-500" />
-              <p className="font-semibold text-yellow-500">Victoire</p>
-            </>
-          ) : (
-            <>
-              <X className="w-6 h-6 mx-auto text-red-800" />
-              <p className="font-semibold text-red-800">Défaite</p>
-            </>
-          )}
+          <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+              match.winner === "player"
+                ? "bg-yellow-500/10 text-yellow-500"
+                : "bg-red-500/10 text-red-400"
+            }`}
+          >
+            {match.winner === "player" ? (
+              <Trophy className="w-4 h-4" />
+            ) : (
+              <X className="w-4 h-4" />
+            )}
+            {match.winner === "player" ? "Victoire" : "Défaite"}
+          </div>
         </div>
       )}
 
       {/* SCORE */}
-      <ScoreBoard
-        match={match}
-        score={match.score}
-        points={points}
-        matchStatus={match.status}
-        playerName={match.player_name}
-        opponentName={match.opponent_name}
-      />
+      <div className={card}>
+        <ScoreBoard
+          match={match}
+          score={match.score}
+          points={points}
+          matchStatus={match.status}
+          playerName={match.player_name}
+          opponentName={match.opponent_name}
+        />
 
-      {/* INFOS */}
-      <div className="flex justify-center gap-4 mt-4 text-xs text-gray-200">
-        <span>🎾 {match.surface}</span>
-        {match.duration_minutes && (
-          <span>
-            <Clock className="inline w-3 h-3" /> {match.duration_minutes} min
-          </span>
-        )}
+        <div className="flex justify-center gap-4 mt-4 text-xs text-gray-400">
+          <span>🎾 {match.surface}</span>
+          {match.duration_minutes && (
+            <span>
+              <Clock className="inline w-3 h-3" /> {match.duration_minutes} min
+            </span>
+          )}
+        </div>
       </div>
 
       {/* STATS */}
-      <div className="mt-10 space-y-4">
-        <StatBar
-          label="Fautes directes"
-          playerValue={player.unforcedErrors}
-          opponentValue={opponent.unforcedErrors}
-        />
-        <StatBar
-          label="Fautes provoquées"
-          playerValue={player.forcedErrors}
-          opponentValue={opponent.forcedErrors}
-        />
-        <StatBar
-          label="Total fautes"
-          playerValue={playerTotalErrors}
-          opponentValue={opponentTotalErrors}
-        />
-        <StatBar
-          label="Aces"
-          playerValue={player.aces}
-          opponentValue={opponent.aces}
-        />
-        <StatBar
-          label="Doubles fautes"
-          playerValue={player.doubleFaults}
-          opponentValue={opponent.doubleFaults}
-        />
+      <div className="mt-10 space-y-6">
+        {/* SERVICE */}
+        <div className={card}>
+          <p className="mb-3 text-sm text-gray-400">Service</p>
 
-        <StatBar
-          label="Winners coup droit"
-          playerValue={player.forehandWinners}
-          opponentValue={opponent.forehandWinners}
-        />
-        <StatBar
-          label="Erreurs coup droit (%)"
-          playerValue={playerForehandErrorRate.toFixed(0)}
-          opponentValue={opponentForehandErrorRate.toFixed(0)}
-          isPercent
-        />
+          <StatBar
+            label="% points service"
+            playerUnits={stats.player.servicePointsWon}
+            opponentUnits={stats.opponent.servicePointsWon}
+            playerRatio={stats.ratios.serviceRatio.player}
+            opponentRatio={stats.ratios.serviceRatio.opponent}
+            isPercent
+          />
 
-        <StatBar
-          label="Winners revers"
-          playerValue={player.backhandWinners}
-          opponentValue={opponent.backhandWinners}
-        />
-        <StatBar
-          label="Erreurs revers (%)"
-          playerValue={playerBackhandErrorRate.toFixed(0)}
-          opponentValue={opponentBackhandErrorRate.toFixed(0)}
-          isPercent
-        />
+          <StatBar
+            label="Aces"
+            playerUnits={stats.player.aces}
+            opponentUnits={stats.opponent.aces}
+            playerRatio={stats.ratios.aces.player}
+            opponentRatio={stats.ratios.aces.opponent}
+            isPercent
+          />
 
-        <StatBar
-          label="Efficacité coup droit (%)"
-          playerValue={
-            playerForehandShots > 0
-              ? ((player.forehandWinners / playerForehandShots) * 100).toFixed(
-                  0,
-                )
-              : 0
-          }
-          opponentValue={
-            opponentForehandShots > 0
-              ? (
-                  (opponent.forehandWinners / opponentForehandShots) *
-                  100
-                ).toFixed(0)
-              : 0
-          }
-          isPercent
-        />
+          <StatBar
+            label="Doubles fautes"
+            playerUnits={stats.player.doubleFaults}
+            opponentUnits={stats.opponent.doubleFaults}
+            playerRatio={stats.ratios.doubleFaults.player}
+            opponentRatio={stats.ratios.doubleFaults.opponent}
+            isPercent
+          />
+        </div>
 
-        <StatBar
-          label="Jeu offensif"
-          playerValue={playerOffensive}
-          opponentValue={opponentOffensive}
-        />
+        {/* FAUTES */}
+        <div className={card}>
+          <p className="mb-3 text-sm text-gray-400">Fautes</p>
 
-        <StatBar
-          label="% points service"
-          playerValue={playerServePct.toFixed(0)}
-          opponentValue={opponentServePct.toFixed(0)}
-          isPercent
-        />
+          <StatBar
+            label="Fautes directes"
+            playerUnits={stats.player.unforcedErrors}
+            opponentUnits={stats.opponent.unforcedErrors}
+            playerRatio={stats.ratios.unforcedErrors.player}
+            opponentRatio={stats.ratios.unforcedErrors.opponent}
+            isPercent
+          />
 
-        <StatBar
-          label="Ratio W / F"
-          playerValue={playerRatio}
-          opponentValue={opponentRatio}
-          isRatio
-        />
+          <StatBar
+            label="Fautes provoquées"
+            playerUnits={stats.player.forcedErrors}
+            opponentUnits={stats.opponent.forcedErrors}
+            playerRatio={stats.ratios.forcedErrors.player}
+            opponentRatio={stats.ratios.forcedErrors.opponent}
+            isPercent
+          />
+
+          <StatBar
+            label="Total fautes"
+            playerUnits={
+              stats.player.forcedErrors + stats.player.unforcedErrors
+            }
+            opponentUnits={
+              stats.opponent.forcedErrors + stats.opponent.unforcedErrors
+            }
+            playerRatio={
+              (stats.ratios.forcedErrors.player +
+                stats.ratios.unforcedErrors.player) /
+              2
+            }
+            opponentRatio={
+              (stats.ratios.forcedErrors.opponent +
+                stats.ratios.unforcedErrors.opponent) /
+              2
+            }
+            isPercent
+          />
+        </div>
+
+        {/* COUPS */}
+        <div className={card}>
+          <p className="mb-3 text-sm text-gray-400">Coups</p>
+          <StatBar
+            label="Coups droit gagnants"
+            playerUnits={stats.player.forehandWinners}
+            opponentUnits={stats.opponent.forehandWinners}
+            playerRatio={stats.ratios.forehandWinners.player}
+            opponentRatio={stats.ratios.forehandWinners.opponent}
+            isPercent
+          />
+
+          <StatBar
+            label="Fautes Coups droit"
+            playerUnits={stats.player.forehandErrors}
+            opponentUnits={stats.opponent.forehandErrors}
+            playerRatio={
+              playerForehandTotal > 0
+                ? (
+                    (stats.player.forehandErrors / playerForehandTotal) *
+                    100
+                  ).toFixed(0)
+                : 0
+            }
+            opponentRatio={
+              opponentForehandTotal > 0
+                ? (
+                    (stats.opponent.forehandErrors / opponentForehandTotal) *
+                    100
+                  ).toFixed(0)
+                : 0
+            }
+            isPercent
+          />
+
+          <StatBar
+            label="Revers gagnants"
+            playerUnits={stats.player.backhandWinners}
+            opponentUnits={stats.opponent.backhandWinners}
+            playerRatio={stats.ratios.backhandWinners.player}
+            opponentRatio={stats.ratios.backhandWinners.opponent}
+            isPercent
+          />
+
+          <StatBar
+            label="Fautes Revers"
+            playerUnits={stats.player.backhandErrors}
+            opponentUnits={stats.opponent.backhandErrors}
+            playerRatio={
+              playerBackhandTotal > 0
+                ? (
+                    (stats.player.backhandErrors / playerBackhandTotal) *
+                    100
+                  ).toFixed(0)
+                : 0
+            }
+            opponentRatio={
+              opponentBackhandTotal > 0
+                ? (
+                    (stats.opponent.backhandErrors / opponentBackhandTotal) *
+                    100
+                  ).toFixed(0)
+                : 0
+            }
+            isPercent
+          />
+        </div>
+
+        {/* PERFORMANCE */}
+        <div className={card}>
+          <p className="mb-3 text-sm text-gray-400">Performance</p>
+          <StatBar
+            label="Jeu offensif"
+            playerUnits={playerOffensive}
+            opponentUnits={opponentOffensive}
+            playerRatio={playerOffensiveRatio}
+            opponentRatio={opponentOffensiveRatio}
+            isPercent
+          />
+
+          <StatBar
+            label="Ratio Gagnant/Perdant"
+            playerRatio={playerRatioWF}
+            opponentRatio={opponentRatioWF}
+            isPercent
+          />
+        </div>
       </div>
 
       {/* WIN RATE */}
-      <div className="p-4 mt-6 border rounded-xl">
-        <p className="mb-2 text-sm">Répartition des points</p>
+      <div className={`${card} mt-6`}>
+        <p className="mb-2 text-sm text-gray-400">Répartition des points</p>
         <StatBar
-          playerValue={player.winners}
-          opponentValue={opponent.winners}
+          label=""
+          playerUnits={player.winners}
+          opponentUnits={opponent.winners}
+          playerRatio={stats.ratios.winners.player}
+          opponentRatio={stats.ratios.winners.opponent}
+          isPercent
         />
       </div>
     </div>
