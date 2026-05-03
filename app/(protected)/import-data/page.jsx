@@ -79,7 +79,29 @@ export default function ImportDataPage() {
 
       setPreviewData(data);
 
-      console.log("PREVIEW DATA:", data);
+
+// 👇 Déduction du serveur sur le 1er point
+
+if (data.length > 0) {
+
+  const firstPoint = data[0];
+
+  const servingFirst = firstPoint.isServing
+
+    ? "player"
+
+    : "opponent";
+
+  setForm((f) => ({
+
+    ...f,
+
+    serving_first: servingFirst,
+
+  }));
+
+}
+
     } catch (e) {
       console.error(e);
     }
